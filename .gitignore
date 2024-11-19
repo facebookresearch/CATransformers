@@ -1,3 +1,6 @@
 datasets
 logs
 scripts
+
+phaze/Estimator/estimates/*
+phaze/GraphExtractor/out/*
