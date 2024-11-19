@@ -1,0 +1,11 @@
+[{"num_tc": 1, "num_vc": 1, "width": 32, "depth": 32, "width_vc": 32, "GLB_Buffer": 4194304, "L2_Buffer": 1048576, "L2_BW": 64, "area": 10149496.74256},
+{"num_tc": 1, "num_vc": 1, "width": 256, "depth": 16, "width_vc": 256, "GLB_Buffer": 4194304, "L2_Buffer": 1048576, "L2_BW": 64, "area": 12654544.423424002},
+{"num_tc": 1, "num_vc": 1, "width": 128, "depth": 16, "width_vc": 128, "GLB_Buffer": 4194304, "L2_Buffer": 1048576, "L2_BW": 64, "area": 11000722.211712},
+{"num_tc": 4, "num_vc": 4, "width": 64, "depth": 64, "width_vc": 64, "GLB_Buffer": 4194304, "L2_Buffer": 1048576, "L2_BW": 64, "area": 31798712.974592},
+{"num_tc": 4, "num_vc": 4, "width": 32, "depth": 32, "width_vc": 32, "GLB_Buffer": 4194304, "L2_Buffer": 1048576, "L2_BW": 64, "area": 22362066.97024},
+{"num_tc": 4, "num_vc": 4, "width": 256, "depth": 16, "width_vc": 256, "GLB_Buffer": 4194304, "L2_Buffer": 1048576, "L2_BW": 64, "area": 32382257.693696},
+{"num_tc": 4, "num_vc": 4, "width": 128, "depth": 16, "width_vc": 128, "GLB_Buffer": 4194304, "L2_Buffer": 1048576, "L2_BW": 64, "area": 25766968.846848004},
+{"num_tc": 4, "num_vc": 4, "width": 256, "depth": 16, "width_vc": 256, "GLB_Buffer": 4194304, "L2_Buffer": 65536, "L2_BW": 64, "area": 20233849.693696},
+{"num_tc": 4, "num_vc": 4, "width": 256, "depth": 16, "width_vc": 256, "GLB_Buffer": 4194304, "L2_Buffer": 1048576, "L2_BW": 128, "area": 32382257.693696},
+{"num_tc": 1, "num_vc": 1, "width": 256, "depth": 8, "width_vc": 256, "GLB_Buffer": 4194304, "L2_Buffer": 65536, "L2_BW": 64, "area": 8060877.664896},
+{"num_tc": 1, "num_vc": 1, "width": 256, "depth": 2, "width_vc": 256, "GLB_Buffer": 4194304, "L2_Buffer": 65536, "L2_BW": 64, "area": 6893454.096000001}]
