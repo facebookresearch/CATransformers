@@ -27,7 +27,6 @@ def parse_args(args):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--train-data",
-        nargs='+',
         type=str,
         default=None,
         help="Path to file(s) with training data. When using webdataset, multiple datasources can be combined using the `::` separator.",
@@ -519,6 +518,12 @@ def parse_args(args):
         required=False,
         default=1,
         help="percent of num hidden attn vision",
+    )
+    parser.add_argument(
+        "--scale-flops",
+        default=False,
+        action="store_true",
+        help="whether to scale training epochs based on flops compared to original model"
     )
 
     args = parser.parse_args(args)

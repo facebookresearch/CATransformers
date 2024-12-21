@@ -1,4 +1,0 @@
-[{"num_tc": 8, "num_vc": 2, "width": 128, "depth": 128, "width_vc": 128, "GLB_Buffer": 134217728, "area": 278826676.31216},
-{"num_tc": 2, "num_vc": 512, "width": 256, "depth": 256, "width_vc": 256, "GLB_Buffer": 33554432, "area": 255687512.60620803},
-{"num_tc": 1, "num_vc": 1, "width": 16, "depth": 16, "width_vc": 16, "GLB_Buffer": 4194304, "area": 6304112.256464}
-]

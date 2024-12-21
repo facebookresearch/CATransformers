@@ -1212,10 +1212,10 @@ def get_fwd_estimation(schd, node, config, total_cycles=-10):
         ir_reg_writes = 0
         ir_reg_reads = 0
 
-        if len(nodes) == 2 and len(nodes[1].output_act[0]) > 0:
+        if len(nodes) == 2 and len(nodes[0].output_act[0]) > 0 and len(nodes[1].output_act[0]) > 0:
             input = nodes[0].output_act[0]
             a_reg = nodes[1].output_act[0]
-
+            
             if len(input) == len(a_reg):
                 # Example: [32, 512, 1024] * [32, 512, 1024] = [32, 512, 1024]
                 if prod(input) > prod(
@@ -3291,7 +3291,7 @@ def get_bwd_estimation(schd, node, config, total_cycles=-10):
         ir_reg_writes = 0
         ir_reg_reads = 0
 
-        if len(nodes) == 2 and len(nodes[1].output_act[0]) > 0:
+        if len(nodes) == 2 and len(nodes[0].output_act[0]) > 0 and len(nodes[1].output_act[0]) > 0:
             input = nodes[0].output_act[0]
             a_reg = nodes[1].output_act[0]
 

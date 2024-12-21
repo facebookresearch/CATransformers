@@ -29,7 +29,12 @@ def estimate_carbon(models_info, micro_batch_size, max_tmp_width, sequence_lengt
     done = False
     result_list = []
     while not done: 
-        operational_carbon_for_models , sequential_latency, component_carbon_per_model, component_latency_per_model = estimate_operational_carbon(models_info, next_cc)
+        result = estimate_operational_carbon(models_info, next_cc)
+        if result != None: 
+            operational_carbon_for_models , sequential_latency, component_carbon_per_model, component_latency_per_model = result
+        else: 
+            return None
+        
         embodied_carbon = estimate_embodied_carbon(next_cc.area, hbm_size)
 
         for model_name, op_carbon in operational_carbon_for_models.items():
@@ -45,7 +50,7 @@ def estimate_carbon(models_info, micro_batch_size, max_tmp_width, sequence_lengt
 
             print ("-------------------------")
 
-            result = {"config": next_cc, "embodied":embodied_carbon, "operational":op_carbon, "total_carbon":total_carbon, "latency":sequential_latency[model_name], "breakdown":component_carbon_per_model[model_name] }
+            result = {"config": next_cc, "area": next_cc.area, "embodied":embodied_carbon, "operational":op_carbon, "total_carbon":total_carbon, "latency":sequential_latency[model_name], "breakdown":component_carbon_per_model[model_name] }
             result_list.append(result)
             # TODO: save data into a json file
         done, next_cc, cc_iter = get_next_acc_config(next_cc, cc_iter)
@@ -99,11 +104,15 @@ def estimate_operational_carbon(models_info, cc):
                     # ret_l_attr['isTensorParallelized'] = l_attr['is_tensor_parallelized']
 
                     per_layer_op_graph = m_per_tmpc.get_op_graph(layer_id)
-                    op_carbon, latency, comp_carbon, comp_lat= op_carbon_per_layer(per_layer_op_graph, cc, latency_estimates[t])
+                    result = op_carbon_per_layer(per_layer_op_graph, cc, latency_estimates[t])
+                    if (result != None):
+                        op_carbon, latency, comp_carbon, comp_lat = result
+                    else:
+                        print("cannot find proper mapping for this configuration")
+                        return None
                     t_op_carbon_component = {}
                     t_op_latency_component = {}
 
-                    # assumes one one type of repeated layer 
                     if layer_id in repeat_layer_first:
                         t_op_carbon = op_carbon * (len(repeat_layer_dict[layer_id]))
                         t_seq_lat = latency * (len(repeat_layer_dict[layer_id]))
@@ -263,7 +272,6 @@ def op_carbon_per_layer(l_op_graph, acc_config, latency_estimates):
 def calculate_carbon_from_energy(graph):
     # use the ILP x_ij values to schedule the operators
     # and then check at most how many cores are active at any given time
-
     non_nop_nodes = [i for i in graph.nodes() if not graph.nodes[i]
                      ['node']['core_type'] == 'Nop']
 
@@ -283,6 +291,7 @@ def calculate_carbon_from_energy(graph):
             componentwise_latency[graph.nodes[i]['node']['component']] = graph.nodes[i]['node']['intra_op_latency']
             componentwise_energy[graph.nodes[i]['node']['component']] = graph.nodes[i]['node']['intra_op_energy']
 
+    print(schedule_latency)
     operational_carbon = operational_carbon_estimate(schedule_energy)
     for component_name, component_energy in componentwise_energy.items():
         component_carbon = operational_carbon_estimate(component_energy)

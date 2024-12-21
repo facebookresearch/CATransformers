@@ -32,11 +32,13 @@ def setup_architecure(cc_from_args=None):
     # Setting the architecture
     reset_accelerator()
     initialize_accelerator()
-    set_configs_to_explore(cc_from_args)
+    return set_configs_to_explore(cc_from_args)
 
 
 def populate_estimates(tmpc_models, max_tmp_width, micro_batch_size, sequence_length, force_reextract_estimates=False, cc_from_args=None):
-    setup_architecure(cc_from_args)
+    architecture_list = setup_architecure(cc_from_args)
+    if(len(architecture_list) == 0):
+        return None
 
     latency_estimates = {}
 

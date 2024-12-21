@@ -5,7 +5,7 @@ architecture:
         block-size: 4
         type: 'LPDDR4'
         width: 128
-        word-bits: 32
+        word-bits: 16
       class: DRAM
       name: DRAM
     name: system
@@ -22,7 +22,7 @@ architecture:
           meshY: 1
           n_banks: 4
           read_bandwidth: 256
-          word-bits: 32
+          word-bits: 16
           write_bandwidth: 256
         class: smartbuffer_SRAM
         name: GLB_Buffer
@@ -37,7 +37,7 @@ architecture:
             meshY: 2
             n_banks: 4
             read_bandwidth: 64
-            word-bits: 32
+            word-bits: 16
             write_bandwidth: 64
           class: smartbuffer_SRAM
           name: L2_Buffer
@@ -51,12 +51,12 @@ architecture:
               meshY: 32
               read_bandwidth: 2
               width: 32
-              word-bits: 32
+              word-bits: 16
               write_bandwidth: 2
             class: regfile
             name: L1_Buffer
           - attributes:
-              datawidth: 32
+              datawidth: 16
               meshX: 32
               meshY: 32
             class: intmac

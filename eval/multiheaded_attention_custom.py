@@ -1,3 +1,4 @@
+# This cusome multiheaded_attention is edited based on prior work HAT
 # HAT: Hardware-Aware Transformers for Efficient Natural Language Processing
 # Hanrui Wang, Zhanghao Wu, Zhijian Liu, Han Cai, Ligeng Zhu, Chuang Gan and Song Han
 # The 58th Annual Meeting of the Association for Computational Linguistics (ACL), 2020.
@@ -12,7 +13,6 @@ from torch.nn.modules.module import _addindent
 from torch.nn.modules.linear import NonDynamicallyQuantizableLinear
 
 from fairseq import utils
-
 
 
 class MultiheadAttentionSuper(nn.Module):

@@ -1,22 +1,10 @@
 import os
 from pathlib import Path
-import argparse
-import datasets
-
-import mobileclip
-from torchvision import transforms
 import torch
-from clip_benchmark.datasets.builder import build_dataset
-from clip_benchmark.metrics import zeroshot_classification as zsc
-from clip_benchmark.datasets.builder import image_captions_collate_fn
-from clip_benchmark.metrics import zeroshot_retrieval as zsr
-import open_clip
-import math
 from torch.nn.utils import prune
 import torch.nn as nn
 import json
 
-from transformers import CLIPProcessor, CLIPModel, CLIPConfig, CLIPVisionConfig,CLIPTextConfig
 from eval.multiheaded_attention_custom import MultiheadAttentionSuper
 
 text_ffn_ranking = []
@@ -43,58 +31,31 @@ def prune_model(model, transform, text_layer, text_embedding_dim, text_ffn_dim, 
     with open(text_ffn_path, "r") as f:
         # Load the JSON data from the file
         text_ffn_ranking = json.load(f)
-        # print(text_ffn_ranking)
     with open(vision_ffn_path, "r") as f:
     # Load the JSON data from the file
         vision_ffn_ranking = json.load(f)
-        # print(vision_ffn_ranking)
     with open(text_head_path, "r") as f:
     # Load the JSON data from the file
         text_head_ranking = json.load(f)
-        # print(text_head_ranking)
     with open(vision_head_path, "r") as f:
     # Load the JSON data from the file
         vision_head_ranking = json.load(f)
-        # print(vision_head_ranking)
 
-    if (text_ffn_dim != 1):
-        model.transformer.resblocks = trim_ffn_mope(model.transformer.resblocks, text_ffn_dim, block_num=8, v_or_t='text')
-    if (vision_ffn_dim != 1):
-        model.visual.transformer.resblocks = trim_ffn_mope(model.visual.transformer.resblocks, vision_ffn_dim, block_num=8, v_or_t='vision')
-    if(text_head_num != 1):
-        model = trim_attn_head_mope(model, text_head_num, v_or_t='text', training=training)
-    if(vision_head_num != 1):
-        model.visual = trim_attn_head_mope(model.visual, vision_head_num, v_or_t='vision', training=training)
-    if (text_embedding_dim != 1):
-        model = trim_embed_text (model, text_embedding_dim, training=training)
-    if (vision_embedding_dim != 1):
-        model.visual = trim_embed_vision(model.visual, vision_embedding_dim, training=training)
-    if (text_layer != 1):
-        model.transformer.resblocks = trim_layers(model.transformer.resblocks, text_layer)
-    if (vision_layer != 1):
-        model.visual.transformer.resblocks = trim_layers_importance(model.visual.transformer.resblocks, vision_layer, v_or_t='vision')
-    # if (text_ffn_dim != 1):
-    #     model.transformer.resblocks = trim_ffn_back(model.transformer.resblocks, text_ffn_dim)
-    # if (vision_ffn_dim != 1):
-    #     model.visual.transformer.resblocks = trim_ffn_back(model.visual.transformer.resblocks, vision_ffn_dim)
-    # if(text_head_num != 1):
-    #     model = trim_num_heads_text(model, text_head_num, training=training)
-    # if(vision_head_num != 1):
-    #     model.visual = trim_num_heads_vision(model.visual, vision_head_num, training=training)
-    # if (text_embedding_dim != 1):
-    #     model = trim_embed_text (model, text_embedding_dim, training=training)
-    # if (vision_embedding_dim != 1):
-    #     model.visual = trim_embed_vision(model.visual, vision_embedding_dim, training=training)
-    # if (text_layer != 1):
-    #     model.transformer.resblocks = trim_layers(model.transformer.resblocks, text_layer)
-    # if (vision_layer != 1):
-    #     model.visual.transformer.resblocks = trim_layers(model.visual.transformer.resblocks, vision_layer)
+
+    model.transformer.resblocks = trim_ffn_mope(model.transformer.resblocks, text_ffn_dim, block_num=8, v_or_t='text')
+    model.visual.transformer.resblocks = trim_ffn_mope(model.visual.transformer.resblocks, vision_ffn_dim, block_num=8, v_or_t='vision')
+    model = trim_attn_head_mope(model, text_head_num, v_or_t='text', training=training)
+    model.visual = trim_attn_head_mope(model.visual, vision_head_num, v_or_t='vision', training=training)
+    model = trim_embed_text (model, text_embedding_dim, training=training)
+    model.visual = trim_embed_vision(model.visual, vision_embedding_dim, training=training)
+    model.transformer.resblocks = trim_layers(model.transformer.resblocks, text_layer)
+    model.visual.transformer.resblocks = trim_layers_importance(model.visual.transformer.resblocks, vision_layer, v_or_t='vision')
+
     return model
 
 
-def trim_layers(model, percentage_layers):
+def trim_layers(model, new_num_layers):
     num_layers = len(model)
-    new_num_layers = int(num_layers * percentage_layers) #round down 
 
     # drop layers in the middle 
     front_layers = int(new_num_layers / 2)
@@ -104,12 +65,11 @@ def trim_layers(model, percentage_layers):
 
 def trim_specific_layer(model, layer_idx):
     num_layers = len(model)
-    print(f"number of layers = {num_layers}")
     new_model = model[:layer_idx] + model[layer_idx + 1:]
     return new_model
 
 
-def trim_layers_importance(model, percentage_layers, v_or_t='text'):
+def trim_layers_importance(model, new_num_layers, v_or_t='text'):
     importance_scores = []
     src = torch.rand(1, 10, model[0].attn.out_proj.out_features) if v_or_t=='text' else torch.rand(1, 10, model[0].attn.out_proj.out_features)
     for i, m in enumerate(model):
@@ -125,7 +85,6 @@ def trim_layers_importance(model, percentage_layers, v_or_t='text'):
 
 
     num_layers = len(model)
-    new_num_layers = int(num_layers * percentage_layers)
     remove_idx_list = []
 
     for i in range(int(num_layers - new_num_layers)):
@@ -139,7 +98,7 @@ def trim_layers_importance(model, percentage_layers, v_or_t='text'):
     # model = model[mask]
 
     remove_idx_list = sorted(remove_idx_list, reverse=True)
-    print(remove_idx_list)
+    # print(remove_idx_list)
     for indx in remove_idx_list:
 
         # checking whether the corresponding iterator index is less than the list length
@@ -154,11 +113,10 @@ def trim_layers_importance(model, percentage_layers, v_or_t='text'):
     return model
 
 
-def trim_embed_vision(model, percentage_embed, training=False):
+def trim_embed_vision(model, new_embed_dim, training=False):
     
     embed_dim = model.conv1.out_channels
         
-    new_embed_dim = int(embed_dim * percentage_embed)
 
     model.positional_embedding.embedding_dim = new_embed_dim
     model.positional_embedding.data = nn.Parameter(model.positional_embedding.data[:, :new_embed_dim])
@@ -217,10 +175,8 @@ def trim_embed_vision(model, percentage_embed, training=False):
 
     return model
 
-def trim_embed_text(model, percentage_embed, training=False):
+def trim_embed_text(model, new_embed_dim, training=False):
     embed_dim = model.token_embedding.embedding_dim 
-        
-    new_embed_dim = int(model.token_embedding.embedding_dim * percentage_embed)
 
     model.positional_embedding.embedding_dim = new_embed_dim
     model.positional_embedding.data = nn.Parameter(model.positional_embedding.data[:, :new_embed_dim])
@@ -273,11 +229,10 @@ def trim_embed_text(model, percentage_embed, training=False):
 
     return model
 
-def trim_ffn_back(model, percentage_ffn):
+def trim_ffn_back(model, new_ffn_dim):
 
     for m in model:
-
-        prune_amount = 1.0 - percentage_ffn
+        prune_amount = 1.0 - (new_ffn_dim / m.mlp.c_fc.out_features)
         m.mlp.c_fc = prune.ln_structured(m.mlp.c_fc, 'weight', amount=prune_amount, dim=0, n=float('-inf'))
         mask = m.mlp.c_fc.weight_mask
         # # Apply the same mask to the bias term
@@ -289,7 +244,7 @@ def trim_ffn_back(model, percentage_ffn):
         non_zero_rows = torch.sum(mask, dim=1) > 0
 
         # Apply the masks to the weight tensor
-        out_features = int(m.mlp.c_fc.out_features * percentage_ffn)
+        out_features = new_ffn_dim
         m.mlp.c_fc.out_features = out_features
         m.mlp.c_fc.weight = nn.Parameter(m.mlp.c_fc.weight[non_zero_rows, :])
         m.mlp.c_fc.bias = nn.Parameter(m.mlp.c_fc.bias[non_zero_rows])
@@ -309,12 +264,12 @@ def trim_ffn_back(model, percentage_ffn):
     return model
 
 
-def trim_num_heads_text(model, percentage_head, training=False):
+def trim_num_heads_text(model, new_attn_heads, training=False):
     
     for m in model.transformer.resblocks:
         embed_dim = m.attn.out_proj.in_features 
         num_attn_heads = m.attn.num_heads
-        new_attn_heads = int(num_attn_heads * percentage_head)
+        # new_attn_heads = int(num_attn_heads * percentage_head)
         head_dim = int(embed_dim / num_attn_heads)
         new_qkv_dim = int(new_attn_heads * head_dim)
         
@@ -349,13 +304,13 @@ def trim_num_heads_text(model, percentage_head, training=False):
 
     return model
 
-def trim_num_heads_vision(model, percentage_head, training=False):
+def trim_num_heads_vision(model, new_attn_heads, training=False):
     
 
     for m in model.transformer.resblocks:
         embed_dim = m.attn.out_proj.in_features 
         num_attn_heads = m.attn.num_heads
-        new_attn_heads = int(num_attn_heads * percentage_head)
+        # new_attn_heads = int(num_attn_heads * percentage_head)
         head_dim = int(embed_dim / num_attn_heads)
         new_qkv_dim = int(new_attn_heads * head_dim)
         
@@ -423,12 +378,14 @@ def trim_ffn_idx(mlp, ffn_idx, block_num=8):
 
     return mlp
 
-def trim_ffn_mope(model, percentage_ffn, block_num=8, v_or_t='text'):
-    num_blocks_to_prune = int (block_num * (1-percentage_ffn))
+def trim_ffn_mope(model, new_ffn_dim, block_num=8, v_or_t='text'):
+    # num_blocks_to_prune = int (block_num * (1-percentage_ffn))
 
     ranking_list = text_ffn_ranking if v_or_t == "text" else vision_ffn_ranking
 
     for layer_num, m in enumerate(model):
+        block_size = int(m.mlp.c_fc.out_features/block_num)
+        num_blocks_to_prune = int(block_num - (new_ffn_dim // block_size))
         _, importance_scores = ranking_list[layer_num]
         remove_idx_list = []
 
@@ -507,19 +464,19 @@ def trim_attn_head_idx(attn, head_idx):
     return attn
 
 
-def trim_attn_head_mope(model, percentage_head, v_or_t='text', training=False):
+def trim_attn_head_mope(model, new_attn_heads, v_or_t='text', training=False):
 
     ranking_list = text_head_ranking if v_or_t == "text" else vision_head_ranking
 
     for layer_num, m in enumerate(model.transformer.resblocks):
         embed_dim = m.attn.out_proj.in_features 
         num_attn_heads = m.attn.num_heads
-        new_attn_heads = int(num_attn_heads * percentage_head)
+        # new_attn_heads = int(num_attn_heads * percentage_head)
         head_dim = int(embed_dim / num_attn_heads)
         new_qkv_dim = int(new_attn_heads * head_dim)
 
 
-        num_heads_to_prune = num_attn_heads - new_attn_heads 
+        num_heads_to_prune = int(num_attn_heads - new_attn_heads)
         _, importance_scores = ranking_list[layer_num]
         remove_idx_list = []
 

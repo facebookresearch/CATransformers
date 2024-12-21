@@ -1,0 +1,26 @@
+ART_summary:
+    version: '0.4'
+    table_summary:
+      - name: system.DSA.core[0..3].PE[0..1023].L1_Buffer
+        area: 0.348053
+        primitive_estimations: Library
+      - name: system.DSA.core[0..3].PE[0..1023].mac
+        area: 379.846667
+        primitive_estimations: Library
+      - name: system.DRAM
+        area: 0.0
+        primitive_estimations: Library
+      - name: system.DSA.core[0..3].L2_Buffer
+        area: 447768.0
+        primitive_estimations:
+          - name: storage
+            estimator: CACTI
+          - name: address_generators[0..1]
+            estimator: Library
+      - name: system.DSA.GLB_Buffer
+        area: 3100860.0
+        primitive_estimations:
+          - name: storage
+            estimator: CACTI
+          - name: address_generators[0..1]
+            estimator: Library

@@ -1,0 +1,283 @@
+ERT:
+    version: '0.4'
+    tables:
+      - name: system.DSA.core[0..3].PE[0..1023].L1_Buffer
+        actions:
+          - name: read
+            arguments:
+                data_delta: 0
+                address_delta: 0
+            energy: 0.190888
+          - name: read
+            arguments:
+                data_delta: 1
+                address_delta: 0
+            energy: 0.190888
+          - name: read
+            arguments:
+                data_delta: 0
+                address_delta: 1
+            energy: 0.190888
+          - name: read
+            arguments:
+                data_delta: 1
+                address_delta: 1
+            energy: 0.190888
+          - name: write
+            arguments:
+                data_delta: 0
+                address_delta: 0
+            energy: 0.254518
+          - name: write
+            arguments:
+                data_delta: 1
+                address_delta: 0
+            energy: 0.254518
+          - name: write
+            arguments:
+                data_delta: 0
+                address_delta: 1
+            energy: 0.254518
+          - name: write
+            arguments:
+                data_delta: 1
+                address_delta: 1
+            energy: 0.254518
+          - name: idle
+            arguments: {}
+            energy: 0.0
+      - name: system.DSA.core[0..3].PE[0..1023].mac
+        actions:
+          - name: mac_random
+            arguments: {}
+            energy: 0.469035
+          - name: mac_reused
+            arguments: {}
+            energy: 0.469035
+          - name: mac_gated
+            arguments: {}
+            energy: 0.469035
+          - name: idle
+            arguments: {}
+            energy: 0.469035
+      - name: system.DRAM
+        actions:
+          - name: read
+            arguments: {}
+            energy: 256.0
+          - name: write
+            arguments: {}
+            energy: 256.0
+          - name: idle
+            arguments: {}
+            energy: 0.0
+      - name: system.DSA.core[0..3].L2_Buffer
+        actions:
+          - name: write
+            arguments:
+                data_delta: 0
+                address_delta: 0
+            energy: 2.0
+          - name: write
+            arguments:
+                data_delta: 1
+                address_delta: 0
+            energy: 11.45847
+          - name: write
+            arguments:
+                data_delta: 0
+                address_delta: 1
+            energy: 3.013408
+          - name: write
+            arguments:
+                data_delta: 1
+                address_delta: 1
+            energy: 12.471877
+          - name: write
+            arguments:
+                data_delta: 0
+                address_delta: 2
+            energy: 4.026815
+          - name: write
+            arguments:
+                data_delta: 1
+                address_delta: 2
+            energy: 13.485285
+          - name: write
+            arguments:
+                data_delta: 0
+                address_delta: 3
+            energy: 5.040222
+          - name: write
+            arguments:
+                data_delta: 1
+                address_delta: 3
+            energy: 14.498692
+          - name: write
+            arguments:
+                data_delta: 0
+                address_delta: 4
+            energy: 6.05363
+          - name: write
+            arguments:
+                data_delta: 1
+                address_delta: 4
+            energy: 15.5121
+          - name: read
+            arguments:
+                data_delta: 0
+                address_delta: 0
+            energy: 1.586294
+          - name: read
+            arguments:
+                data_delta: 1
+                address_delta: 0
+            energy: 12.146704
+          - name: read
+            arguments:
+                data_delta: 0
+                address_delta: 1
+            energy: 2.717766
+          - name: read
+            arguments:
+                data_delta: 1
+                address_delta: 1
+            energy: 13.278176
+          - name: read
+            arguments:
+                data_delta: 0
+                address_delta: 2
+            energy: 3.849239
+          - name: read
+            arguments:
+                data_delta: 1
+                address_delta: 2
+            energy: 14.409649
+          - name: read
+            arguments:
+                data_delta: 0
+                address_delta: 3
+            energy: 4.980711
+          - name: read
+            arguments:
+                data_delta: 1
+                address_delta: 3
+            energy: 15.541121
+          - name: read
+            arguments:
+                data_delta: 0
+                address_delta: 4
+            energy: 6.112184
+          - name: read
+            arguments:
+                data_delta: 1
+                address_delta: 4
+            energy: 16.672594
+          - name: idle
+            arguments: {}
+            energy: 2.0
+      - name: system.DSA.GLB_Buffer
+        actions:
+          - name: write
+            arguments:
+                data_delta: 0
+                address_delta: 0
+            energy: 2.0
+          - name: write
+            arguments:
+                data_delta: 1
+                address_delta: 0
+            energy: 28.04644
+          - name: write
+            arguments:
+                data_delta: 0
+                address_delta: 1
+            energy: 4.79069
+          - name: write
+            arguments:
+                data_delta: 1
+                address_delta: 1
+            energy: 30.83713
+          - name: write
+            arguments:
+                data_delta: 0
+                address_delta: 2
+            energy: 7.58138
+          - name: write
+            arguments:
+                data_delta: 1
+                address_delta: 2
+            energy: 33.62782
+          - name: write
+            arguments:
+                data_delta: 0
+                address_delta: 3
+            energy: 10.37207
+          - name: write
+            arguments:
+                data_delta: 1
+                address_delta: 3
+            energy: 36.41851
+          - name: write
+            arguments:
+                data_delta: 0
+                address_delta: 4
+            energy: 13.16276
+          - name: write
+            arguments:
+                data_delta: 1
+                address_delta: 4
+            energy: 39.2092
+          - name: read
+            arguments:
+                data_delta: 0
+                address_delta: 0
+            energy: 1.586294
+          - name: read
+            arguments:
+                data_delta: 1
+                address_delta: 0
+            energy: 33.380084
+          - name: read
+            arguments:
+                data_delta: 0
+                address_delta: 1
+            energy: 4.992771
+          - name: read
+            arguments:
+                data_delta: 1
+                address_delta: 1
+            energy: 36.786561
+          - name: read
+            arguments:
+                data_delta: 0
+                address_delta: 2
+            energy: 8.399249
+          - name: read
+            arguments:
+                data_delta: 1
+                address_delta: 2
+            energy: 40.193039
+          - name: read
+            arguments:
+                data_delta: 0
+                address_delta: 3
+            energy: 11.805726
+          - name: read
+            arguments:
+                data_delta: 1
+                address_delta: 3
+            energy: 43.599516
+          - name: read
+            arguments:
+                data_delta: 0
+                address_delta: 4
+            energy: 15.212204
+          - name: read
+            arguments:
+                data_delta: 1
+                address_delta: 4
+            energy: 47.005994
+          - name: idle
+            arguments: {}
+            energy: 2.0

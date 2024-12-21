@@ -84,8 +84,9 @@ def operational_carbon_estimate(energy):
 def initialize_carbon_intensity(zone="US-CAL-CISO", start="2023-01-01", end="2024-01-01"):
     global avg_carbon_intensity
 
-    data = query_emaps_zone(zone, start, end)
-    avg_carbon_intensity = (data["AER"].mean())
+    # data = query_emaps_zone(zone, start, end)
+    # avg_carbon_intensity = (data["AER"].mean())
+    avg_carbon_intensity = 262.66632420091327 # use pre computed number
     print("Carbon Intensity initialized for " + zone + " in between " + start + " and " + end + " as: " + str(avg_carbon_intensity))
 
 # Function to retrieve dara and format

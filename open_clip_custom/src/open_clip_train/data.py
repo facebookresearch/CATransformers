@@ -190,10 +190,21 @@ def group_by_keys_nothrow(data, keys=base_plus_ext, lcase=True, suffixes=None, h
     :param lcase: convert suffixes to lower case (Default value = True)
     """
     current_sample = None
-    for filesample in data:
+    for i, filesample in enumerate(data):
         assert isinstance(filesample, dict)
-        fname, value = filesample["fname"], filesample["data"]
+        try:
+            fname, value = filesample["fname"], filesample["data"]
+        except:
+            # print(i, filesample)
+            continue
+
+        # META: metaclip jpeg files start with ./ when processed
+        if fname.startswith('./'):
+            fname = fname[2:]
+        
+
         prefix, suffix = keys(fname)
+
         if prefix is None:
             continue
         if lcase:
@@ -423,6 +434,7 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, tokeni
         persistent_workers=args.workers > 0,
     )
 
+
     # FIXME not clear which approach is better, with_epoch before vs after dataloader?
     # hoping to resolve via https://github.com/webdataset/webdataset/issues/169
     # if is_train:
@@ -448,7 +460,7 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None):
     input_filename = args.train_data if is_train else args.val_data
     assert input_filename
     dataset = CsvDataset(
-        input_filename[0],
+        input_filename,
         preprocess_fn,
         img_key=args.csv_img_key,
         caption_key=args.csv_caption_key,

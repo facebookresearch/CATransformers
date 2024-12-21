@@ -1,0 +1,46 @@
+mapspace_constraints:
+  - type: datatype
+    target: L1_Buffer
+    keep:
+    - Inputs
+    - Outputs
+    - Weights
+  - type: datatype
+    target: L2_Buffer
+    bypass:
+    - Inputs
+    - Outputs
+    - Weights
+  - type: datatype
+    target: GLB_Buffer
+    bypass:
+    - Weights
+    keep:
+    - Inputs
+    - Outputs
+  - split: 1
+    permutation: CMNRSPQ
+    type: spatial
+    target: L2_Buffer
+    factors: C=1 M=1 N=1 P=1 Q=1 R=1 S=1 
+  - split: 1
+    permutation: CMNRSPQ
+    type: spatial
+    target: GLB_Buffer
+    factors: C=2 M=2 N=1 P=1 Q=1 R=1 S=1
+  - permutation: NMCRSPQ
+    type: temporal
+    target: L1_Buffer
+    factors: N=1 M=1 C=1 R=1 S=1
+  - permutation: NMCRSPQ
+    type: temporal
+    target: L2_Buffer
+    factors: P=1 Q=1 R=1 S=1
+  - permutation: NMCRSPQ
+    type: temporal
+    target: GLB_Buffer
+    factors: P=1 Q=1 R=1 S=1
+  - permutation: NMCRSPQ
+    type: temporal
+    target: DRAM
+    factors: R=1 S=1

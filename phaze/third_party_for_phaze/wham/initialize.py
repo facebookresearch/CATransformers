@@ -82,14 +82,14 @@ def initialize(initial_config, cost_model_dir=None):
     gemm_arch["architecture"]["subtree"][0]["subtree"][0]["local"][0]["attributes"][
         "read_bandwidth"
     ] = int(
-        (initial_config["GLB_BUFFER_BW"] * 8)
-        / (definitions.PRECISION * definitions.GLB_BUFFER_BLOCK_SIZE)
+        (initial_config["GLB_BUFFER_BW"]) # words/cycle
+        / (definitions.GLB_BUFFER_BLOCK_SIZE)
     )
     gemm_arch["architecture"]["subtree"][0]["subtree"][0]["local"][0]["attributes"][
         "write_bandwidth"
     ] = int(
-        (initial_config["GLB_BUFFER_BW"] * 8)
-        / (definitions.PRECISION * definitions.GLB_BUFFER_BLOCK_SIZE)
+        (initial_config["GLB_BUFFER_BW"]) # words/cycle
+        / (definitions.GLB_BUFFER_BLOCK_SIZE)
     )
 
     # Core L2 BUFFER
@@ -105,7 +105,7 @@ def initialize(initial_config, cost_model_dir=None):
     gemm_arch["architecture"]["subtree"][0]["subtree"][0]["subtree"][0]["local"][0][
         "attributes"
     ]["memory_depth"] = int(
-        initial_config["L2_Buffer"]
+        initial_config["L2_Buffer"] 
         / (definitions.L2_BUFFER_BLOCK_SIZE * (definitions.PRECISION / 8))
     )
     gemm_arch["architecture"]["subtree"][0]["subtree"][0]["subtree"][0]["local"][0][
@@ -114,14 +114,14 @@ def initialize(initial_config, cost_model_dir=None):
     gemm_arch["architecture"]["subtree"][0]["subtree"][0]["subtree"][0]["local"][0][
         "attributes"
     ]["read_bandwidth"] = int(
-        (definitions.L2_BUFFER_NOC_BW * 8)
-        / (definitions.PRECISION * definitions.L2_BUFFER_BLOCK_SIZE)
+        (initial_config["L2_BW"]) # words/cycle
+        / (definitions.L2_BUFFER_BLOCK_SIZE)
     )
     gemm_arch["architecture"]["subtree"][0]["subtree"][0]["subtree"][0]["local"][0][
         "attributes"
     ]["write_bandwidth"] = int(
-        (definitions.L2_BUFFER_NOC_BW * 8)
-        / (definitions.PRECISION * definitions.L2_BUFFER_BLOCK_SIZE)
+        (initial_config["L2_BW"]) # words/cycle
+        / (definitions.L2_BUFFER_BLOCK_SIZE)
     )
     gemm_arch["architecture"]["subtree"][0]["subtree"][0]["subtree"][0]["local"][0][
         "attributes"
@@ -209,14 +209,14 @@ def initialize(initial_config, cost_model_dir=None):
     vector_arch["architecture"]["subtree"][0]["subtree"][0]["local"][0]["attributes"][
         "read_bandwidth"
     ] = int(
-        (initial_config["GLB_BUFFER_BW"] * 8)
-        / (definitions.PRECISION * definitions.GLB_BUFFER_BLOCK_SIZE)
+        (initial_config["GLB_BUFFER_BW"])# words/cycle
+        / (definitions.GLB_BUFFER_BLOCK_SIZE)
     )
     vector_arch["architecture"]["subtree"][0]["subtree"][0]["local"][0]["attributes"][
         "write_bandwidth"
     ] = int(
-        (initial_config["GLB_BUFFER_BW"] * 8)
-        / (definitions.PRECISION * definitions.GLB_BUFFER_BLOCK_SIZE)
+        (initial_config["GLB_BUFFER_BW"]) # words/cycle
+        / (definitions.GLB_BUFFER_BLOCK_SIZE)
     )
 
     # Core L2 BUFFER
@@ -241,14 +241,14 @@ def initialize(initial_config, cost_model_dir=None):
     vector_arch["architecture"]["subtree"][0]["subtree"][0]["subtree"][0]["local"][0][
         "attributes"
     ]["read_bandwidth"] = int(
-        (definitions.L2_BUFFER_NOC_BW * 8)
-        / (definitions.PRECISION * definitions.L2_BUFFER_BLOCK_SIZE)
+        (initial_config["L2_BW"]) # words/cycle
+        / (definitions.L2_BUFFER_BLOCK_SIZE)
     )
     vector_arch["architecture"]["subtree"][0]["subtree"][0]["subtree"][0]["local"][0][
         "attributes"
     ]["write_bandwidth"] = int(
-        (definitions.L2_BUFFER_NOC_BW * 8)
-        / (definitions.PRECISION * definitions.L2_BUFFER_BLOCK_SIZE)
+        (initial_config["L2_BW"]) # words/cycle
+        / (definitions.L2_BUFFER_BLOCK_SIZE)
     )
     vector_arch["architecture"]["subtree"][0]["subtree"][0]["subtree"][0]["local"][0][
         "attributes"

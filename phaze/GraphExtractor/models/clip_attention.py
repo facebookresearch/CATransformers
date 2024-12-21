@@ -7,9 +7,9 @@ from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from transformers import CLIPModel as CLIPModel_orig
 from transformers import CLIPModel, CLIPConfig,CLIPTextConfig, CLIPVisionConfig, CLIPVisionModel, CLIPTextModel
-from transformers.models.clip.modeling_clip import CLIPVisionTransformer, CLIPTextTransformer 
+from transformers.models.clip.modeling_clip import CLIPVisionTransformer, CLIPTextTransformer, CLIPPreTrainedModel
 from transformers.models.clip.modeling_clip import CLIPVisionEmbeddings, CLIPEncoderLayer, CLIPTextEmbeddings, CLIPEncoder, CLIPMLP, CLIPAttention
-
+from transformers import PreTrainedModel
 
 class CLIPAttentionCustom(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
@@ -118,7 +118,7 @@ class CLIPAttentionCustom(nn.Module):
     
 class CLIPEncoderLayerCustom(CLIPEncoderLayer):
     def __init__(self, config: CLIPConfig):
-        super().__init__(config)
+        nn.Module.__init__(self)
         self.embed_dim = config.hidden_size
         self.self_attn = CLIPAttentionCustom(config)
         self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
@@ -136,7 +136,7 @@ class CLIPEncoderCustom(CLIPEncoder):
     """
 
     def __init__(self, config: CLIPConfig):
-        super().__init__(config)
+        nn.Module.__init__(self)
         self.config = config
         self.layers = nn.ModuleList([CLIPEncoderLayerCustom(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
@@ -144,7 +144,7 @@ class CLIPEncoderCustom(CLIPEncoder):
 
 class CLIPTextTransformerCustom(CLIPTextTransformer):
     def __init__(self, config: CLIPTextConfig):
-        super().__init__(config)
+        nn.Module.__init__(self)
         self.config = config
         embed_dim = config.hidden_size
         self.embeddings = CLIPTextEmbeddings(config)
@@ -163,7 +163,7 @@ class CLIPTextModelCustom(CLIPTextModel):
     _no_split_modules = ["CLIPTextEmbeddings", "CLIPEncoderLayer"]
 
     def __init__(self, config: CLIPTextConfig):
-        super().__init__(config)
+        CLIPPreTrainedModel.__init__(self, config)
         self.text_model = CLIPTextTransformerCustom(config)
         # Initialize weights and apply final processing
         self.post_init()
@@ -171,7 +171,7 @@ class CLIPTextModelCustom(CLIPTextModel):
 
 class CLIPVisionTransformerCustom(CLIPVisionTransformer):
     def __init__(self, config: CLIPVisionConfig):
-        super().__init__(config)
+        nn.Module.__init__(self)
         self.config = config
         embed_dim = config.hidden_size
 
@@ -186,7 +186,7 @@ class CLIPVisionModelCustom(CLIPVisionModel):
     _no_split_modules = ["CLIPEncoderLayer"]
 
     def __init__(self, config: CLIPVisionConfig):
-        super().__init__(config)
+        CLIPPreTrainedModel.__init__(self, config)
         self.vision_model = CLIPVisionTransformerCustom(config)
         # Initialize weights and apply final processing
         self.post_init()
@@ -197,7 +197,7 @@ class CLIPModel(CLIPModel_orig):
     _no_split_modules = ["CLIPTextEmbeddings", "CLIPEncoderLayer", "CLIPVisionEmbeddings"]
 
     def __init__(self, config: CLIPConfig):
-        super().__init__(config)
+        CLIPPreTrainedModel.__init__(self, config)
 
         if not isinstance(config.text_config, CLIPTextConfig):
             raise TypeError(

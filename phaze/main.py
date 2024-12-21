@@ -122,10 +122,5 @@ if __name__ == "__main__":
 
 
 def estimate_carbon(phaze_model_names, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, hw_config, model_config):
-   carbon, latency = estimate_total_carbon(phaze_model_names, 1, 1, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, model_config, hw_config, 1)
-   return carbon, latency
-
-# # dummy test
-# def estimate_carbon(phaze_model_names, phaze_seq_len, force_reextract_model, hbm_size, hw_config, model_config):
-#     return model_config['num_hidden_layers']*5, model_config['num_hidden_layers']*5
-
+   carbon, latency, area = estimate_total_carbon(phaze_model_names, 1, 1, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, model_config, hw_config, 1)
+   return carbon, latency, area

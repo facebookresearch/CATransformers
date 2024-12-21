@@ -2,6 +2,7 @@
 from .GraphExtractor import extract_graph
 from .Estimator import populate_estimates, estimate_carbon
 from .Solver import run_solver
+import math
 
 
 def extract_only(model_names, max_tmp_width, micro_batch_size,
@@ -58,7 +59,11 @@ def estimate_total_carbon(model_names, max_tmp_width, micro_batch_size, sequence
     for model_name in model_names:
         tmpc_models, latency_estimates = extract_and_populate(
             model_name, max_tmp_width, micro_batch_size, sequence_length, force_reextract_model, force_reextract_estimates, model_config, cc_from_arg)
-
+        
+        # No valid architecture found, no estimates generated 
+        if (latency_estimates) == None:
+            return (math.inf,  math.inf, math.inf)
+        
         models_info[model_name] = (tmpc_models, latency_estimates)
 
     print("Extracted graph and populated for all the models ...")
@@ -82,7 +87,6 @@ def estimate_total_carbon(model_names, max_tmp_width, micro_batch_size, sequence
                 for result in result_list:
                     writer.writerow([model_config["num_hidden_layers"],model_config["hidden_size"],model_config["intermediate_size"],model_config["vision_num_hidden_layers"], model_config["vision_hidden_size"], model_config["vision_intermediate_size"], result['config'],result['embodied'], result['operational'], result["total_carbon"], result['latency'],result['breakdown']]) 
     if result_list !=None:
-        return (result_list[0]["total_carbon"], result_list[0]['latency'])
+        return (result_list[0]["total_carbon"], result_list[0]['latency'], result_list[0]['area'])
     else:
-        import math
-        return (math.inf,  math.inf)
+        return (math.inf,  math.inf, math.inf)

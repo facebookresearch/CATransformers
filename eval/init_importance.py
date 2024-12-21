@@ -1,10 +1,8 @@
-import zeroshot_imagenet
-import captioning
 from pruning import trim_attn_head_idx, trim_ffn_idx
 from model_eval import eval_retreival, eval_zeroShotClassification
 import csv, json
 import torch
-import open_clip
+import open_clip_custom
 import copy
 
 text_ffn_ranking = []
@@ -16,22 +14,19 @@ def init_importance(model, transform):
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(0)
-    model, _, transform = open_clip.create_model_and_transforms('ViT-B-16', pretrained='datacomp_xl_s13b_b90k')
+    model, _, transform = open_clip_custom.create_model_and_transforms('ViT-B-16', pretrained='datacomp_xl_s13b_b90k')
     model.eval()
     print(model)
     model = model.to(device)
 
 
-    # for every layer in text model, evaluate it's importnace (12)
-    # rank_attn_heads(model, transform, 'text')
-    # rank_attn_heads(model, transform, 'vision')
-    # rank_ffn_dim(model, transform, 'text')
+    # for every layer in text model, evaluate it's importance (12)
+    rank_attn_heads(model, transform, 'text')
+    rank_attn_heads(model, transform, 'vision')
+    rank_ffn_dim(model, transform, 'text')
     rank_ffn_dim(model, transform, 'vision')
 
     return text_ffn_ranking, vision_ffn_ranking, text_head_ranking, vision_head_ranking
-    # for every layer in vision model, evaluate and rank it's importance (12)
-    # for every layer in the text model, for every head in the model, evaluate and rank its importance (12 * 8)
-    # for every layer in the vision model, for every head in the model, evaluate and rank its importance (12 * 12)
 
 # def rank_text_layers(model): 
 #     importance_scores = []
@@ -156,16 +151,15 @@ def evaluate_model(model, transform):
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(0)
-    model, _, transform = open_clip.create_model_and_transforms('ViT-B-16', pretrained='datacomp_xl_s13b_b90k')
+    model, _, transform = open_clip_custom.create_model_and_transforms('ViT-B-16', pretrained='datacomp_xl_s13b_b90k')
     model.eval()
     print(model)
     model = model.to(device)
 
     rank_ffn_dim(model, transform, 'text')
-    # rank_attn_heads(model, transform, 'text')
-
-    # rank_attn_heads(model, transform, 'vision')
-    # rank_ffn_dim(model, transform, 'vision')
+    rank_attn_heads(model, transform, 'text')
+    rank_attn_heads(model, transform, 'vision')
+    rank_ffn_dim(model, transform, 'vision')
 
 
 

@@ -1,0 +1,281 @@
+import torch
+from ax.service.ax_client import AxClient
+from ax.service.utils.instantiation import ObjectiveProperties
+from ax.exceptions.generation_strategy import GenerationStrategyRepeatedPoints
+
+# Plotting imports and initialization
+from ax.service.utils.report_utils import exp_to_df
+
+from eval import model_eval, model_constants
+from phaze import main
+from configurations import TEXT_MODEL_PARAMS, VISION_MODEL_PARAMS, HW_PARAMS, NUM_TRIALS, AREA_CONSTRAINT, AREA_CONSTRAINT_VALUE
+import csv, os
+import pandas as pd
+import matplotlib.pyplot as plt
+
+def model_accuracy(model_param) -> float:
+        accuracy_ret, size = model_eval.train_and_eval(model_param)
+        return float(accuracy_ret['mean_recall@1']), size
+
+def model_carbon(model_param, hw_param) -> float:
+        model = ["CLIP"]
+        phaze_seq_len = 77
+        force_reextract_model = False
+        force_reextract_estimates = True
+        hbm_size = 1
+
+        # model, phaze_seq_len, force_reextract_model, hbm_size, hw_param, model_param
+        carbon, latency, area = main.estimate_carbon(model, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, hw_param, model_param)
+        return carbon, latency, area
+
+# Evaluation Function
+def evaluate(trial, parameters, csv_file_name):
+
+    hw_config = {}
+    hw_config["num_tc"] = parameters.get("cluster_num")
+    hw_config["num_vc"] = parameters.get("cluster_num")
+
+    hw_config["width"] = parameters.get("width")
+    hw_config["depth"] = parameters.get("depth")
+    hw_config["width_vc"] = parameters.get("width")
+    hw_config["GLB_Buffer"] = parameters.get("glb_buffer_MB")*1024 *1024
+    hw_config["L2_Buffer"] = parameters.get("l2_sram_choices_KB")*1024
+    hw_config["L2_BW"] = parameters.get("l2_bw")
+    
+    num_ffn_blocks = 8
+    text_block_size = model_constants.orig_models["ViT-B-16"]["text_ffn_dim"] / num_ffn_blocks
+    vision_block_size = model_constants.orig_models["ViT-B-16"]["vision_ffn_dim"] / num_ffn_blocks
+
+    num_hidden_blocks = 8
+    text_hidden_block_size = model_constants.orig_models["ViT-B-16"]["text_embedding_dim"] / num_hidden_blocks
+    vision_hidden_block_size = model_constants.orig_models["ViT-B-16"]["vision_embedding_dim"] / num_hidden_blocks
+    
+    model_config = {}
+    model_config["num_hidden_layers"] = parameters.get("num_hidden_layers")
+    model_config["intermediate_size"] = int(parameters.get("intermediate_size") * text_block_size)
+    model_config["hidden_size"] = int(parameters.get("hidden_size") * text_hidden_block_size)
+    model_config["num_attn_heads"] = parameters.get("num_attn_heads")
+    model_config["vision_num_hidden_layers"] = parameters.get("vision_num_hidden_layers")
+    model_config["vision_intermediate_size"] = int(parameters.get("vision_intermediate_size")* vision_block_size)
+    model_config["vision_hidden_size"] = int(parameters.get("vision_hidden_size") * vision_hidden_block_size)
+    model_config["vision_num_attn_heads"] = parameters.get("vision_num_attn_heads")
+
+    accuracy, size= model_accuracy(model_config)
+    carbon, latency, area = model_carbon(model_config, hw_config)
+
+    with open(csv_file_name, "a", newline="") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow([trial, accuracy, carbon, latency, parameters, size, area])
+
+    return {"accuracy": (accuracy, 0.0), "carbon": (carbon, 0.0), "area": (area, 0.0), "latency": (latency,0.0)}
+
+# ### Plot Pareto Frontier
+def pareto_frontier(df, area_constraint, save_name):
+    home_dir = os.getcwd()
+    directory = f"{home_dir}/results/{save_name}"
+
+    # Filter data points by area constraint
+    filtered_df = df[df['area'] <= area_constraint]
+    # Get accuracy and latency values
+    accuracy = filtered_df['accuracy'].values
+    latency = filtered_df['latency'].values
+    # Compute Pareto frontier
+    indices = []
+    for i in range(len(accuracy)):
+        is_dominated = False
+        for j in range(len(accuracy)):
+            if i != j and accuracy[j] >= accuracy[i] and latency[j] <= latency[i]:
+                is_dominated = True
+                break
+        if not is_dominated:
+            indices.append(i)
+    # Get points on the Pareto frontier
+    frontier_points = filtered_df.iloc[indices]
+    frontier_points.to_csv(f"{directory}/{save_name}_curve.csv", index=False)
+
+    # plot frontier
+    plt.figure(figsize=(8, 6))
+    plt.scatter(df['latency'], df['accuracy'], c='blue', alpha=0.5, label='All points')
+    plt.scatter(frontier_points['latency'], frontier_points['accuracy'], c='red', label='Pareto frontier')
+    plt.xlabel('Latency')
+    plt.ylabel('Accuracy')
+    plt.title(f'Pareto Frontier with Area Constraint {area_constraint}')
+    plt.legend()
+    plt.savefig(f"{directory}/{save_name}_both.png")
+
+    plt.cla()
+    plt.clf()
+
+    # plot frontier
+    plt.figure(figsize=(8, 6))
+    plt.scatter(frontier_points['latency'], frontier_points['accuracy'], c='red', label='Pareto frontier')
+    plt.xlabel('Latency')
+    plt.ylabel('Accuracy')
+    plt.title(f'Pareto Frontier with Area Constraint {area_constraint}')
+    plt.savefig(f"{directory}/{save_name}_curve.png")
+
+    plt.cla()
+    plt.clf()
+
+    acc = df['accuracy']
+    carbon = df['carbon']
+    latency = df['latency']
+    # Create a scatter plot of Accuracy vs Carbon
+    plt.scatter(carbon, acc, c=latency, cmap='viridis',  vmin=0, vmax=0.1)
+    # Add a colorbar to represent the Trial Numbers
+    cbar = plt.colorbar()
+    cbar.set_label('Latency')
+    # Set labels and title
+    plt.xlabel('Carbon')
+    plt.ylabel('Accuracy')
+    plt.title('Accuracy vs Carbon')
+    # Show the plot
+    plt.savefig(f"{directory}/{save_name}_acc_vs_carbon.png", dpi=300, bbox_inches='tight')
+
+    return frontier_points
+
+def optimize(run_name):
+
+    home_dir = os.getcwd()
+    directory = f"{home_dir}/results/{run_name}"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    
+    ax_client = AxClient()
+    # ChoiceParameterConfig.is_ordered=True 
+    ax_client.create_experiment(
+        name=f"{run_name}",
+        parameters=[
+            {
+                "name": f"num_hidden_layers",
+                "type": "range",
+                "bounds": [TEXT_MODEL_PARAMS['MIN_LAYERS'], TEXT_MODEL_PARAMS['MAX_LAYERS']],
+                "value_type": "int"
+            }, 
+            {
+                "name": f"intermediate_size",
+                "type": "range",
+                "bounds": [TEXT_MODEL_PARAMS['MIN_FFN_BLOCK'], TEXT_MODEL_PARAMS['MAX_FFN_BLOCK']],
+                "value_type": "int"
+            }, 
+            {
+                "name": f"hidden_size",
+                "type": "range",
+                "bounds": [TEXT_MODEL_PARAMS['MIN_EMB_BLOCK'], TEXT_MODEL_PARAMS['MAX_EMB_BLOCK']],
+                "value_type": "int"
+            }, 
+            {
+                "name": f"num_attn_heads",
+                "type": "range",
+                "bounds": [TEXT_MODEL_PARAMS['MIN_ATTN_HEAD'], TEXT_MODEL_PARAMS['MAX_ATTN_HEAD']],
+                "value_type": "int"
+            }, 
+            {
+                "name": f"vision_num_hidden_layers",
+                "type": "range",
+                "bounds": [VISION_MODEL_PARAMS['MIN_VISION_LAYERS'], VISION_MODEL_PARAMS['MAX_VISION_LAYERS']],
+                "value_type": "int"
+            }, 
+            {
+                "name": f"vision_intermediate_size",
+                "type": "range",
+                "bounds": [VISION_MODEL_PARAMS['MIN_VISION_FFN_BLOCK'], VISION_MODEL_PARAMS['MAX_VISION_FFN_BLOCK']],
+                "value_type": "int"
+            }, 
+            {
+                "name": f"vision_hidden_size",
+                "type": "range",
+                "bounds": [VISION_MODEL_PARAMS['MIN_VISION_EMB_BLOCK'], VISION_MODEL_PARAMS['MAX_VISION_EMB_BLOCK']],
+                "value_type": "int"
+            }, 
+            {
+                "name": f"vision_num_attn_heads",
+                "type": "range",
+                "bounds": [VISION_MODEL_PARAMS['MIN_VISION_ATTN_HEAD'], VISION_MODEL_PARAMS['MAX_VISION_ATTN_HEAD']],
+                "value_type": "int"
+            },
+            {
+                "name": f"cluster_num",
+                "type": "choice",
+                "values": HW_PARAMS['CLUSTER_NUM'],
+                "is_ordered": True,
+            }, 
+            {
+                "name": f"width",
+                "type": "choice",
+                "values": HW_PARAMS['WIDTH'],
+                "is_ordered": True,
+            }, 
+            {
+                "name": f"depth",
+                "type": "choice",
+                "values": HW_PARAMS['DEPTH'],
+                "is_ordered": True,
+            }, 
+            {
+                "name": f"l2_sram_choices_KB",
+                "type": "choice",
+                "values": HW_PARAMS['L2_SRAM'],
+                "is_ordered": True,
+            }, 
+            {
+                "name": f"l2_bw",
+                "type": "choice",
+                "values": HW_PARAMS['L2_BW'],
+                "is_ordered": True,
+            }, 
+            {
+                "name": f"glb_buffer_MB",
+                "type": "choice",
+                "values": HW_PARAMS['GLB_BUFFER'],
+                "is_ordered": True,
+            }
+        ],
+        objectives={
+            # `threshold` arguments are optional
+            "accuracy": ObjectiveProperties(minimize=False, threshold=0.1),
+            "latency": ObjectiveProperties(minimize=True,threshold=0.02),
+        },
+        outcome_constraints=[
+            AREA_CONSTRAINT,
+        ],
+        tracking_metric_names=[
+            "area",
+            "carbon"
+        ],
+        overwrite_existing_experiment=True,
+        choose_generation_strategy_kwargs={"should_deduplicate": True},
+    )
+
+    # ### Run Optimization
+
+    csv_file_name = f"{directory}/{run_name}.csv"
+
+    with open(csv_file_name, "a", newline="") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["Trial Number", "Accuracy", "Carbon", "Latency", "Parameters", "Model size", "Area"])
+
+    for i in range(NUM_TRIALS):
+        try:
+            parameters, trial_index = ax_client.get_next_trial()
+            # Local evaluation here can be replaced with deployment to external system.
+            ax_client.complete_trial(trial_index=trial_index, raw_data=evaluate(i,parameters, csv_file_name))
+        except GenerationStrategyRepeatedPoints as e:
+            ax_client.save_to_json_file(filepath=f'{directory}/{run_name}.json')
+            df = exp_to_df(ax_client.experiment)
+            # Save the DataFrame to a CSV file
+            df.to_csv(f'{directory}/data_{run_name}.csv', index=False)
+            print(f"Error occurred at iteration {i}: {e}")
+            break
+
+    # save results, and plot pareto graph  
+    # Create a sample DataFrame
+    df = exp_to_df(ax_client.experiment)
+    # Save the DataFrame to a CSV file
+    df.to_csv(f'{directory}/data_{run_name}.csv', index=False)
+
+    ax_client.save_to_json_file(filepath=f'{directory}/{run_name}.json')
+    # Set area constraint (e.g., 100)
+    area_constraint = AREA_CONSTRAINT_VALUE
+    # Compute Pareto frontier
+    frontier_points = pareto_frontier(df, area_constraint, run_name)

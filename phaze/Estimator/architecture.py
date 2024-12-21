@@ -8,12 +8,15 @@ from math import log2
 import os
 import sys
 import json
+from configurations import FREQUENCY, HW_PARAMS
 
-# Global Variables for Architecture
+# Global Variables for Architecture # Meta - not used 
 bandwidth = 4 * 1024 * 1024 * 1024  # 32 Gbs or 4 GBs, PCIE 3.0
-num_accelerators = 1024  # accelerators
-bytes_per_element = 2  # 16 bits
-frequency = 1.05 * (10**6)  # 1.05 GHz
+num_accelerators = 1  # accelerators
+bytes_per_element = 1  # 16 bits
+
+# Meta - Turing and Edge tpu @ 500 MHz
+frequency = FREQUENCY
 
 # types of cores in the architectures
 cores = ["TC", "VC"]
@@ -31,7 +34,7 @@ max_acc_config_per_dim = acc_config(
     4, 4, 256, 256, 256, 8*1024*1024, 1*1024*1024, 128, -1)
 
 # maximum accelerator config for area constraint
-max_acc_config = acc_config(4, 4, 32, 32, 32, 8*1024*1024, 1*1024*1024, 128, -1)
+max_acc_config = acc_config(4, 4, 256, 64, 256, 8*1024*1024, 1*1024*1024, 128, -1)
 area_constraint = -1
 
 # potential accelerator configs to explore
@@ -98,43 +101,32 @@ def generate_all_cores_to_explore():
         return False
     
 
-    dimensions = [(32, 32), (256, 2), (64, 16), (64, 32), (64, 64), (128, 8), (128,16), (128, 32), (256, 4), (256, 8), (256, 16)]
-    l2_sram_choices_KB = [64, 128, 512, 1024]
-    l2_bw = [64, 128]
-    glb_buffer_MB = [2, 4, 8]
-    core_cluster = [1, 2, 4]
+# Meta - read search params from configuration file 
+    width = HW_PARAMS['WIDTH']
+    depth= HW_PARAMS['DEPTH']
+    l2_sram_choices_KB = HW_PARAMS['L2_SRAM']
+    l2_bw = HW_PARAMS['L2_BW']
+    glb_buffer_MB = HW_PARAMS["GLB_BUFFER"]
+    core_cluster = HW_PARAMS["CLUSTER_NUM"]
 
-    
-    # max_log_depth = int(log2(max_acc_config_per_dim.depth))
-    # max_log_width = int(log2(max_acc_config_per_dim.width))
-    # max_log_cores = int(log2(max_acc_config_per_dim.num_tc))
-    # max_log_GLB_bufferMB = max_acc_config_per_dim.GLB_Buffer / (1024*1024)
-    # max_log_GLB_buffer = int(log2(max_log_GLB_bufferMB))
-
-    # restricting the total number of possibilites by making the TC and VC core width the same
-
-    # for log_x in range(max_log_cores, -1, -1):
-    #     for log_y in range(max_log_cores, -1, -1):
-    #         for log_w in range(max_log_width, 0, -1):
-    #             for log_d in range(max_log_depth, 0, -1):
-    #                 for log_glb in range(max_log_GLB_buffer, 0, -1):
-    #                     config = acc_config(2**log_x, 2**log_y,
-    #                                         2**log_w, 2**log_d, 2**log_w, (2**log_glb)*1024*1024, -1)
-    #                     check_if_acc_to_explore(config)
+# Meta
     for x in core_cluster:
-            for dim in dimensions:
-                print(dim)
-                for glb in glb_buffer_MB:
-                    for l2_sram in l2_sram_choices_KB:
-                            for bw in l2_bw:
-                                pe_x, pe_y = dim
-                                config = acc_config(x, x,
-                                                pe_x, pe_y, pe_x, (glb)*1024*1024, l2_sram* 1024,bw, -1)
-                                check_if_acc_to_explore(config)
-
-
-    # meta
-    # config = acc_config(1, 1, 256, 8, 256, (4)*1024*1024, 64*1024, 64, -1)
+            for pe_x in width:
+                for pe_y in depth:
+                    print(pe_x, pe_y)
+                    for glb in glb_buffer_MB:
+                        for l2_sram in l2_sram_choices_KB:
+                                for bw in l2_bw:
+                                    config = acc_config(x, x,
+                                                    pe_x, pe_y, pe_x, (glb)*1024*1024, l2_sram* 1024,bw, -1)
+                                    check_if_acc_to_explore(config)
+    
+    # meta - grid search
+    # config = acc_config(4, 4, 256, 64, 256, (8)*1024*1024, 1*1024*1024, 64, -1)
+    # check_if_acc_to_explore(config)
+    # config = acc_config(1, 1, 256, 64, 256, (8)*1024*1024, 1*1024*1024, 64, -1)
+    # check_if_acc_to_explore(config)
+    # config = acc_config(2, 2, 256, 4, 256, (8)*1024*1024, 1*1024*1024, 64, -1)
     # check_if_acc_to_explore(config)
     # config = acc_config(1, 1, 256, 2, 256, (4)*1024*1024, 64*1024, 64, -1)
     # check_if_acc_to_explore(config)
@@ -152,7 +144,6 @@ def generate_all_cores_to_explore():
     # check_if_acc_to_explore(config)
     # config = acc_config(4, 4, 256, 16, 256, (4)*1024*1024, 1*1024*1024, 128, -1)
     # check_if_acc_to_explore(config)
-
 
 
 
@@ -195,6 +186,7 @@ def set_configs_to_explore(cc_from_args=None):
     "acc_config_arg", ["num_tc", "num_vc", "width", "depth", "width_vc", "GLB_Buffer", "L2_Buffer", "L2_BW"])
 
     global acc_configs_to_explore
+    acc_configs_to_explore.clear()
 
     if os.path.exists(config_file):
 

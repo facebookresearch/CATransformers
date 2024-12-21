@@ -22,16 +22,18 @@ import open_clip
 import math
 from torch.nn.utils import prune
 import torch.nn as nn
+import time
 
 # from pruning import prune_model
 from eval.pruning import prune_model
 from eval.multiheaded_attention_custom import MultiheadAttentionSuper
+from eval.model_constants import calculate_flop, orig_models, MAX_EPOCH
 
 from transformers import CLIPProcessor, CLIPModel, CLIPConfig, CLIPVisionConfig,CLIPTextConfig
 from pathlib import Path
 import sys
-
-sys.path.append('/private/home/irenewang/HWNAS/open_clip/src/')
+import os
+import subprocess
 
 
 class RetrievalDataset(torch.utils.data.Dataset):
@@ -195,7 +197,7 @@ def create_model(text_layer, text_embedding_dim, text_ffn_dim, text_head_num, vi
     model, _, transform = open_clip.create_model_and_transforms('ViT-B-16', pretrained='datacomp_xl_s13b_b90k')
     # # # model, _, transform = open_clip.create_model_and_transforms('ViT-B-32-quickgelu', pretrained='metaclip_400m') 
     model.eval()
-    model = prune_model(model, transform, text_layer, text_embedding_dim, text_ffn_dim, text_head_num, vision_layer, vision_embedding_dim, vision_ffn_dim, vision_head_num)
+    model = prune_model(model, transform, int(text_layer), int(text_embedding_dim), int(text_ffn_dim), int(text_head_num), int(vision_layer), int(vision_embedding_dim), int(vision_ffn_dim), int(vision_head_num))
     if load_checkpoint != None:
         print("loading model from checkpoint: " + load_checkpoint)
         open_clip.load_checkpoint(model, load_checkpoint)
@@ -215,7 +217,7 @@ def create_model(text_layer, text_embedding_dim, text_ffn_dim, text_head_num, vi
     print('model size: {:.3f}MB'.format(size_all_mb))
     print('num Param: {:.3f}M'.format(num_parameters/ 1024**2))
     model_size = '{:.3f}MB'.format(size_all_mb)
-
+    
     return model, transform, model_size
 
 def create_webdataset(
@@ -229,14 +231,31 @@ def create_webdataset(
 
     data_folder = f"wds_{task.replace('/','-')}"
     data_root = f"https://huggingface.co/datasets/clip-benchmark/{data_folder}/tree/main"
-    dataset = build_dataset(
-        dataset_name=f"wds/{task}",
-        root=data_root,
-        transform=transform,
-        split="test",
-        download=False,
-        task=task_type
-    )
+    max_retries = 10
+    retry_delay = 60  # seconds
+    home_dir = os.getcwd()
+    cache_directory = f"{home_dir}/dataset/{data_folder}"
+    os.makedirs(cache_directory, exist_ok=True)
+    for attempt in range(max_retries):
+        try:
+            dataset = build_dataset(
+                dataset_name=f"wds/{task}",
+                root=data_root,
+                transform=transform,
+                split="test",
+                download=False,
+                task=task_type,
+                wds_cache_dir=cache_directory
+            )
+            break
+        except Exception as e:
+            print(f"Attempt {attempt+1}/{max_retries} failed: {e}")
+            if attempt < max_retries - 1:
+                print(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                raise Exception("All attempts failed")
+
     if dataset_len:
         dataset = dataset.with_length((dataset_len + batch_size - 1) // batch_size)
     dataloader = torch.utils.data.DataLoader(
@@ -261,27 +280,8 @@ if __name__ == "__main__":
         vision_layer=args.vision_layers, vision_embedding_dim=args.vision_embed_dim, vision_ffn_dim=args.vision_ffn_dim, vision_head_num=args.vision_head_num, load_checkpoint=checkpoint)
 
     metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform)
-    metric_zsc = eval_zeroShotClassification(task='imagenet1k', model=model, transform=transform)
 
     print(f"MSCOCO Eval Metrics: {metric_retrieval}")
-    print(f"ImageNet1k Eval Metrics: {metric_zsc}")
-
-def eval(text_layer=1, text_embedding_dim=1, text_ffn_dim=1, text_head_num=1,
-    vision_layer=1, vision_embedding_dim=1, vision_ffn_dim=1, vision_head_num=1, checkpoint=None):
-    model, transform, model_size = create_model(
-        text_layer=text_layer, text_embedding_dim=text_embedding_dim, text_ffn_dim=text_ffn_dim, text_head_num=text_head_num,
-        vision_layer=vision_layer, vision_embedding_dim=vision_embedding_dim, vision_ffn_dim=vision_ffn_dim, vision_head_num=vision_head_num, load_checkpoint=checkpoint
-    )
-    metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform)
-    metric_zsc = eval_zeroShotClassification(task='imagenet1k', model=model, transform=transform)
-
-    # metric_retrieval = {}
-    # metric_zsc = {}
-
-    print(f"MSCOCO Eval Metrics: {metric_retrieval}")
-    print(f"ImageNet1k Eval Metrics: {metric_zsc}")
-    
-    return metric_retrieval, metric_zsc, model_size
 
 def train_and_eval(model_config):
 
@@ -294,44 +294,61 @@ def train_and_eval(model_config):
     vision_embedding_dim = model_config["vision_hidden_size"]
     vision_head_num = model_config["vision_num_attn_heads"]
 
-    # TODO: train the model 
     checkpoint_name = f"model_eval_{text_layer}_{text_embedding_dim}_{text_ffn_dim}_{text_head_num}_{vision_layer}_{vision_embedding_dim}_{vision_ffn_dim}_{vision_head_num}"
+    home_dir = os.getcwd()
 
-    import os
-    import subprocess
-    checkpoint_path = f"/private/home/irenewang/HWNAS/logs/{checkpoint_name}/checkpoints/epoch_1.pt"
+    checkpoint_path = f"{home_dir}/logs/{checkpoint_name}/checkpoints/epoch_1.pt"
     if os.path.exists(checkpoint_path):
         print("checkpoint already exists!")
     else:
-        command = f"torchrun --nproc_per_node=8 /private/home/irenewang/HWNAS/open_clip_custom/src/open_clip_train/main.py --dataset-type='csv' --train-data=/private/home/irenewang/HWNAS/dataset/train2014.csv \
+        command = f"torchrun --nproc_per_node=8 {home_dir}/open_clip_custom/src/open_clip_train/main.py --dataset-type='csv' --train-data=/private/home/irenewang/HWNAS/dataset/train2014.csv \
         --batch-size 64     --lr 1e-5     --wd 0.1     --epochs=1    --workers=32      --model=ViT-B-16   --pretrained=datacomp_xl_s13b_b90k \
         --text-layers {text_layer} --text-embed-dim {text_embedding_dim} --text-ffn-dim {text_ffn_dim} --text-head-num {text_head_num} \
-        --vision-layers {vision_layer} --vision-embed-dim {vision_embedding_dim} --vision-ffn-dim {vision_ffn_dim} --vision-head-num {vision_head_num} --name {checkpoint_name}"
-        # Use subprocess to run the command
+        --vision-layers {vision_layer} --vision-embed-dim {vision_embedding_dim} --vision-ffn-dim {vision_ffn_dim} --vision-head-num {vision_head_num} --name {checkpoint_name} --scale-flops"
         # Specify the working directory
-        working_directory = "/private/home/irenewang/HWNAS"
+        working_directory = home_dir
         # Run the command using subprocess
         subprocess.run(command, shell=True, cwd=working_directory)
+    
+    orig_model_configs = orig_models['ViT-B-16']
+    orig_model_flops = calculate_flop(orig_model_configs["text_layer"],orig_model_configs["text_embedding_dim"], orig_model_configs["text_ffn_dim"], orig_model_configs["text_head_num"],
+                                        orig_model_configs["vision_layer"], orig_model_configs["vision_embedding_dim"], orig_model_configs["vision_ffn_dim"], orig_model_configs["vision_head_num"])
+
+    pruned_model_flops = calculate_flop(text_layer, text_embedding_dim, text_ffn_dim, text_head_num, 
+                                          vision_layer, vision_embedding_dim, vision_ffn_dim, vision_head_num)
+    
+    flop_ratio = orig_model_flops / pruned_model_flops
+
+    total_epochs = math.ceil(1* flop_ratio)
+    if(total_epochs > MAX_EPOCH):
+        total_epochs = MAX_EPOCH
 
     # Eval model 
     model, transform, model_size = create_model(
         text_layer=text_layer, text_embedding_dim=text_embedding_dim, text_ffn_dim=text_ffn_dim, text_head_num=text_head_num,
-        vision_layer=vision_layer, vision_embedding_dim=vision_embedding_dim, vision_ffn_dim=vision_ffn_dim, vision_head_num=vision_head_num, load_checkpoint=f"/private/home/irenewang/HWNAS/logs/{checkpoint_name}/checkpoints/epoch_1.pt"
+        vision_layer=vision_layer, vision_embedding_dim=vision_embedding_dim, vision_ffn_dim=vision_ffn_dim, vision_head_num=vision_head_num, load_checkpoint=f"{home_dir}/logs/{checkpoint_name}/checkpoints/epoch_{total_epochs}.pt"
     )
-    metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform)
-    # metric_zsc = eval_zeroShotClassification(task='imagenet1k', model=model, transform=transform)
-    metric_zsc= {}
 
-    # metric_retrieval = {}
-    # metric_zsc = {}
+    max_retries = 10
+    retry_delay = 60  # seconds
+    for attempt in range(max_retries):
+        try:
+            metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform)
+            break
+        except Exception as e:
+            print(f"Attempt at evaluation {attempt+1}/{max_retries} failed: {e}")
+            if attempt < max_retries - 1:
+                print(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                raise Exception("All attempts at evaluation failed")
 
     print(f"MSCOCO Eval Metrics: {metric_retrieval}")
-    print(f"ImageNet1k Eval Metrics: {metric_zsc}")
     
-    return metric_retrieval, metric_zsc, model_size
+    return metric_retrieval, model_size
 
 
-def eval_only(model_config):
+def eval_only(model_config, checkpoint=None):
 
     text_layer = model_config["num_hidden_layers"] 
     text_ffn_dim = model_config["intermediate_size"]
@@ -346,19 +363,54 @@ def eval_only(model_config):
     # Eval model 
     model, transform, model_size = create_model(
         text_layer=text_layer, text_embedding_dim=text_embedding_dim, text_ffn_dim=text_ffn_dim, text_head_num=text_head_num,
-        vision_layer=vision_layer, vision_embedding_dim=vision_embedding_dim, vision_ffn_dim=vision_ffn_dim, vision_head_num=vision_head_num
+        vision_layer=vision_layer, vision_embedding_dim=vision_embedding_dim, vision_ffn_dim=vision_ffn_dim, vision_head_num=vision_head_num,
+        load_checkpoint=checkpoint
     )
-    metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform)
+    max_retries = 10
+    retry_delay = 60  # seconds
+    for attempt in range(max_retries):
+        try:
+            metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform)
+            break
+        except Exception as e:
+            print(f"Attempt at evaluation {attempt+1}/{max_retries} failed: {e}")
+            if attempt < max_retries - 1:
+                print(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                raise Exception("All attempts at evaluation failed")
     # metric_zsc = eval_zeroShotClassification(task='imagenet1k', model=model, transform=transform)
     metric_zsc= {}
-
-    # metric_retrieval = {}
-    # metric_zsc = {}
 
     print(f"MSCOCO Eval Metrics: {metric_retrieval}")
     print(f"ImageNet1k Eval Metrics: {metric_zsc}")
     
     return metric_retrieval, metric_zsc, model_size
+
+
+
+def eval_imagenet(model_config, checkpoint=None):
+
+    text_layer = model_config["num_hidden_layers"] 
+    text_ffn_dim = model_config["intermediate_size"]
+    text_embedding_dim = model_config["hidden_size"] 
+    text_head_num = model_config["num_attn_heads"] 
+    vision_layer = model_config["vision_num_hidden_layers"]
+    vision_ffn_dim = model_config["vision_intermediate_size"] 
+    vision_embedding_dim = model_config["vision_hidden_size"]
+    vision_head_num = model_config["vision_num_attn_heads"]
+
+    # Eval model 
+    model, transform, model_size = create_model(
+        text_layer=text_layer, text_embedding_dim=text_embedding_dim, text_ffn_dim=text_ffn_dim, text_head_num=text_head_num,
+        vision_layer=vision_layer, vision_embedding_dim=vision_embedding_dim, vision_ffn_dim=vision_ffn_dim, vision_head_num=vision_head_num,
+        load_checkpoint=checkpoint
+    )
+    metric_zsc = eval_zeroShotClassification(task='imagenet1k', model=model, transform=transform)
+
+    print(f"ImageNet1k Eval Metrics: {metric_zsc}")
+    
+    return metric_zsc
 
 
 

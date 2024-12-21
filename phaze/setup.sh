@@ -34,12 +34,14 @@ cp -r third_party_for_phaze/phaze-megatron-lm/megatron/*  /private/home/irenewan
 
 git clone https://github.com/Accelergy-Project/accelergy.git
 cd accelergy
+git checkout 0278a565187dc019ca40043ed486bf94b645327e
 pip3 install .
 accelergy
 cd ..
 
 git clone https://github.com/Accelergy-Project/accelergy-cacti-plug-in.git
 cd accelergy-cacti-plug-in
+git checkout ba5468303c27b4a1a317742a4eaf147065b907e5
 pip3 install .
 
 git clone https://github.com/HewlettPackard/cacti.git 
@@ -50,11 +52,13 @@ cd ../..
 
 git clone https://github.com/Accelergy-Project/accelergy-table-based-plug-ins.git
 cd accelergy-table-based-plug-ins/
+git checkout 223039ffbf0e034f3b09c2b80074ad398fbaf03e 
 pip3 install .
 cd ..
 
 git clone https://github.com/Accelergy-Project/accelergy-library-plug-in.git
 cd accelergy-library-plug-in/
+git checkout   0cab62c3631dbbe9a7925ff795285619a1bd6538
 pip3 install .
 cd ..
 

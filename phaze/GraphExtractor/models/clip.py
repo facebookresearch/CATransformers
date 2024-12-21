@@ -49,21 +49,21 @@ class ClipIR(BaseModelIR):
             if(self.model_config!=None):
                 text_configuration = CLIPTextConfig.from_pretrained("openai/clip-vit-base-patch16",hidden_size=self.model_config['hidden_size'],
                                                         num_hidden_layers=self.model_config['num_hidden_layers'], 
-                                                        intermediate_size=self.model_config['intermediate_size'])
+                                                        intermediate_size=self.model_config['intermediate_size'], num_attention_heads=self.model_config['num_attn_heads'])
                 vision_configuration = CLIPVisionConfig.from_pretrained("openai/clip-vit-base-patch16",hidden_size=self.model_config['vision_hidden_size'],
                                                         num_hidden_layers=self.model_config['vision_num_hidden_layers'], 
-                                                        intermediate_size=self.model_config['vision_intermediate_size'])
+                                                        intermediate_size=self.model_config['vision_intermediate_size'], num_attention_heads=self.model_config['vision_num_attn_heads'])
                 configuration = CLIPConfig.from_pretrained("openai/clip-vit-base-patch16", text_config=text_configuration, vision_config=vision_configuration, attn_implementation="eager")
 
 
                 # Initializing a CLIPModel (with random weights) from the openai/clip-vit-base-patch32 style configuration
+                # text_configuration.num_attention_heads = self.model_config['num_attn_heads']
+                # vision_configuration.num_attention_heads = self.model_config['vision_num_attn_heads']
+
                 self.model = CLIPModelCustom(configuration)
             else:
                 self.model = CLIPModel.from_pretrained("openai/clip-vit-base-patch16", attn_implementation="eager")
             # Accessing the model configuration
-            
-            text_configuration.num_attention_heads = self.model_config['num_attn_heads']
-            vision_configuration.num_attention_heads = self.model_config['vision_num_attn_heads']
 
             # new_multihead_attention = CLIPAttentionCustom(text_configuration)
             # for m in self.model.text_model.encoder.layers:

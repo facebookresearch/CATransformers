@@ -1,6 +1,10 @@
-datasets
+dataset
 logs
 scripts
+__pycache__
+**/__pycache__/
+results
+
 
 phaze/Estimator/estimates/*
 phaze/GraphExtractor/out/*

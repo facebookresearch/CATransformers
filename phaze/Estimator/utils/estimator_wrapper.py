@@ -109,7 +109,7 @@ def setup_accelerator_with_config(config):
 
 def create_core_config_for_estimation(core_config, ):
     max_glb_size = 29360128
-    max_glb_bw = 4096
+    max_glb_bw = 512
     buffer_scale_metric = 256
 
     dim1 = 2**int(log2(core_config.num)/2)
@@ -130,6 +130,16 @@ def create_core_config_for_estimation(core_config, ):
     # if (L2_Buffer < 1024*1024):
     #     L2_Buffer = 1024*1024
     L2_Buffer = core_config.L2_Buffer
+
+    min_L2_Buffer = (2**(log2(core_config.width) +
+                 log2(core_config.depth) - 6)) * 1024
+    
+    if (L2_Buffer < min_L2_Buffer):
+        L2_Buffer = min_L2_Buffer
+    
+    # TODO: fix this corner case
+    if (core_config.width==256 and core_config.depth==32):
+        L2_Buffer = 256*1024
 
     acc_config = {
         # Compute Unit configuration

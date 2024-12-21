@@ -12,9 +12,9 @@ import torch.nn as nn
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-sys.path.append('/private/home/irenewang/HWNAS/eval/')
 from eval.multiheaded_attention_custom import MultiheadAttentionSuper
 from eval.pruning import prune_model
+from eval.model_constants import calculate_flop, orig_models, MAX_EPOCH
 
 
 
@@ -249,36 +249,28 @@ def main(args):
         cache_dir=args.cache_dir,
         **model_kwargs,
     )
-    text_layer = args.text_layers
-    text_ffn_dim = args.text_ffn_dim
-    text_embedding_dim = args.text_embed_dim
-    text_head_num = args.text_head_num
-    vision_layer = args.vision_layers
-    vision_ffn_dim = args.vision_ffn_dim
-    vision_embedding_dim = args.vision_embed_dim
-    vision_head_num = args.vision_head_num
+    text_layer = int(args.text_layers)
+    text_ffn_dim = int(args.text_ffn_dim)
+    text_embedding_dim = int(args.text_embed_dim)
+    text_head_num = int(args.text_head_num)
+    vision_layer = int(args.vision_layers)
+    vision_ffn_dim = int(args.vision_ffn_dim)
+    vision_embedding_dim = int(args.vision_embed_dim)
+    vision_head_num = int(args.vision_head_num)
 
     model = prune_model(model, preprocess_train, text_layer, text_embedding_dim, text_ffn_dim, text_head_num, vision_layer, vision_embedding_dim, vision_ffn_dim, vision_head_num, True)
 
-    # if (text_ffn_dim != 1):
-    #     model.transformer.resblocks = trim_ffn(model.transformer.resblocks, text_ffn_dim)
-    # if (text_head_num != 1):
-    #     model = trim_num_heads_text(model, text_head_num)
-    # if (text_layer != 1):
-    #     model.transformer.resblocks = trim_layers(model.transformer.resblocks, text_layer)
-    # if (text_embedding_dim != 1):
-    #     model = trim_embed_text(model, text_embedding_dim)
+    orig_model_configs = orig_models[args.model]
+    orig_model_flops = calculate_flop(orig_model_configs["text_layer"],orig_model_configs["text_embedding_dim"], orig_model_configs["text_ffn_dim"], orig_model_configs["text_head_num"],
+                                        orig_model_configs["vision_layer"], orig_model_configs["vision_embedding_dim"], orig_model_configs["vision_ffn_dim"], orig_model_configs["vision_head_num"])
+
+    pruned_model_flops = calculate_flop(text_layer, text_embedding_dim, text_ffn_dim, text_head_num, 
+                                          vision_layer, vision_embedding_dim, vision_ffn_dim, vision_head_num)
     
-    # if (vision_ffn_dim != 1):
-    #     model.visual.transformer.resblocks = trim_ffn(model.visual.transformer.resblocks, vision_ffn_dim)
-    # if (vision_head_num != 1):
-    #     model.visual = trim_num_heads_vision(model.visual, vision_head_num)
-    # if (vision_layer != 1):
-    #     model.visual.transformer.resblocks = trim_layers(model.visual.transformer.resblocks, vision_layer)
-    # if (vision_embedding_dim != 1):
-    #     model.visual = trim_embed_vision(model.visual, vision_embedding_dim)
+    flop_ratio = orig_model_flops / pruned_model_flops
+    
     model.to(device)
-    print(model)
+    # print(model)
     torch.cuda.empty_cache()
 
     if args.distill:
@@ -410,10 +402,23 @@ def main(args):
     )
     assert len(data), 'At least one train or eval dataset must be specified.'
 
+    if args.scale_flops:
+        # scale the number of steps based on pruning ratio
+        total_epochs = args.epochs * flop_ratio
+        if(total_epochs >= MAX_EPOCH):
+            total_epochs = MAX_EPOCH
+        total_steps = int((data["train"].dataloader.num_batches // args.accum_freq) * total_epochs)
+        total_epochs = math.ceil(total_epochs)
+
+        print(f"total steps:{total_steps}, total epochs:{total_epochs}, ratio:{flop_ratio}")
+    else:
+        total_epochs = args.epochs
+        total_steps = int((data["train"].dataloader.num_batches // args.accum_freq) * total_epochs)
+
     # create scheduler if train
     scheduler = None
     if 'train' in data and optimizer is not None:
-        total_steps = (data["train"].dataloader.num_batches // args.accum_freq) * args.epochs
+        # total_steps = (data["train"].dataloader.num_batches // args.accum_freq) * args.epochs
         if args.lr_scheduler == "cosine":
             scheduler = cosine_lr(optimizer, args.lr, args.warmup, total_steps)
         elif args.lr_scheduler == "const":
@@ -477,11 +482,12 @@ def main(args):
 
     loss = create_loss(args)
 
-    for epoch in range(start_epoch, args.epochs):
+
+    for epoch in range(start_epoch, total_epochs):
         if is_master(args):
             logging.info(f'Start epoch {epoch}')
 
-        train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist_model, args, tb_writer=writer)
+        train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist_model, args, tb_writer=writer, stop_step=total_steps)
         completed_epoch = epoch + 1
 
         if any(v in data for v in ('val', 'imagenet-val', 'imagenet-v2')):
@@ -498,7 +504,7 @@ def main(args):
             if scaler is not None:
                 checkpoint_dict["scaler"] = scaler.state_dict()
 
-            if completed_epoch == args.epochs or (
+            if completed_epoch == total_epochs or (
                 args.save_frequency > 0 and (completed_epoch % args.save_frequency) == 0
             ):
                 torch.save(
@@ -550,255 +556,6 @@ def copy_codebase(args):
     copytree(current_code_path, new_code_path, ignore=ignore_patterns('log', 'logs', 'wandb'))
     print("Done copying code.")
     return 1
-
-
-def trim_layers(model, percentage_layers):
-    num_layers = len(model)
-    new_num_layers = int(num_layers * percentage_layers) #round down 
-
-    # drop layers in the middle 
-    front_layers = int(new_num_layers / 2)
-    back_layers = int(0-(new_num_layers - front_layers))
-    model = model[:front_layers] + model[back_layers:]
-    return model
-
-
-def trim_embed_vision(model, percentage_embed):
-    
-    embed_dim = model.conv1.out_channels
-        
-    new_embed_dim = int(embed_dim * percentage_embed)
-
-    model.positional_embedding.embedding_dim = new_embed_dim
-    model.positional_embedding.data = nn.Parameter(model.positional_embedding.data[:, :new_embed_dim])
-
-    model.class_embedding.embedding_dim = new_embed_dim
-    model.class_embedding.data = nn.Parameter(model.class_embedding.data[:new_embed_dim])
-
-    model.conv1.out_channels = new_embed_dim
-    model.conv1.weight = nn.Parameter(model.conv1.weight[:new_embed_dim, :])
-    # model.conv1.bias = nn.Parameter(model.conv1.bias[:new_embed_dim])
-    
-    model.ln_pre.normalized_shape = (new_embed_dim,)
-    model.ln_pre.weight = nn.Parameter(model.ln_pre.weight[:new_embed_dim])
-    model.ln_pre.bias = nn.Parameter(model.ln_pre.bias[:new_embed_dim])
-
-    model.ln_post.normalized_shape = (new_embed_dim,)
-    model.ln_post.weight = nn.Parameter(model.ln_post.weight[:new_embed_dim])
-    model.ln_post.bias = nn.Parameter(model.ln_post.bias[:new_embed_dim])
-
-    model.proj.data = nn.Parameter(model.proj.data[:new_embed_dim, :])
-
-    for m in model.transformer.resblocks:
-        m.ln_1.normalized_shape = (new_embed_dim,)
-        m.ln_1.weight = nn.Parameter(m.ln_1.weight[:new_embed_dim])
-        m.ln_1.bias = nn.Parameter(m.ln_1.bias[:new_embed_dim])
-        qkv_dim = m.attn.out_proj.in_features
-
-
-        # create a new MultiheadAttention module with the desired embedding dimension
-        new_multihead_attention = MultiheadAttentionSuper(super_embed_dim=new_embed_dim, is_encoder=True, num_heads=m.attn.num_heads, qkv_dim=qkv_dim)
-
-        # new_multihead_attention.load_state_dict(m.attn.state_dict())
-        new_multihead_attention.in_proj_weight = nn.Parameter(m.attn.in_proj_weight.data[:, :new_embed_dim])
-        new_multihead_attention.in_proj_bias = nn.Parameter(m.attn.in_proj_bias.data[:])
-
-        new_multihead_attention.out_proj.out_features = new_embed_dim
-        new_multihead_attention.out_proj.weight = nn.Parameter(m.attn.out_proj.weight[:new_embed_dim, :])
-        new_multihead_attention.out_proj.bias = nn.Parameter(m.attn.out_proj.bias[:new_embed_dim])
-
-        m.attn.embed_dim = new_embed_dim
-        old_attn = m.attn 
-        m.attn = new_multihead_attention
-        del old_attn
-
-        m.ln_2.normalized_shape = (new_embed_dim,)
-        m.ln_2.weight = nn.Parameter(m.ln_2.weight[:new_embed_dim])
-        m.ln_2.bias = nn.Parameter(m.ln_2.bias[:new_embed_dim])
-
-
-        m.mlp.c_fc.in_features = new_embed_dim
-        m.mlp.c_fc.weight = nn.Parameter(m.mlp.c_fc.weight[:, :new_embed_dim])
-
-        m.mlp.c_proj.out_features = new_embed_dim
-        m.mlp.c_proj.weight = nn.Parameter(m.mlp.c_proj.weight[:new_embed_dim, :])
-        m.mlp.c_proj.bias = nn.Parameter(m.mlp.c_proj.bias[:new_embed_dim])
-
-    return model
-
-def trim_embed_text(model, percentage_embed):
-    embed_dim = model.token_embedding.embedding_dim 
-        
-    new_embed_dim = int(model.token_embedding.embedding_dim * percentage_embed)
-
-    model.positional_embedding.embedding_dim = new_embed_dim
-    model.positional_embedding.data = nn.Parameter(model.positional_embedding.data[:, :new_embed_dim])
-
-    model.token_embedding.embedding_dim = new_embed_dim
-    model.token_embedding.weight = nn.Parameter(model.token_embedding.weight[:, :new_embed_dim])
-
-    model.ln_final.normalized_shape = (new_embed_dim,)
-    model.ln_final.weight = nn.Parameter(model.ln_final.weight[:new_embed_dim])
-    model.ln_final.bias = nn.Parameter(model.ln_final.bias[:new_embed_dim])
-
-    model.text_projection.data = nn.Parameter(model.text_projection.data[:new_embed_dim, :])
-    # model.visual.proj.data = nn.Parameter(model.visual.proj.data[:, :new_embed_dim])
-
-    for m in model.transformer.resblocks:
-        m.ln_1.normalized_shape = (new_embed_dim,)
-        m.ln_1.weight = nn.Parameter(m.ln_1.weight[:new_embed_dim])
-        m.ln_1.bias = nn.Parameter(m.ln_1.bias[:new_embed_dim])
-        qkv_dim = m.attn.out_proj.in_features
-
-        # create a new MultiheadAttention module with the desired embedding dimension
-        # new_multihead_attention = nn.MultiheadAttention(embed_dim=512, num_heads=m.attn.num_heads)
-        new_multihead_attention = MultiheadAttentionSuper(super_embed_dim=new_embed_dim, is_encoder=True, num_heads=m.attn.num_heads, qkv_dim=qkv_dim)
-        head_dim = int(embed_dim / m.attn.num_heads)
-        new_head_dim = int(new_embed_dim / m.attn.num_heads)
-
-        # new_multihead_attention.load_state_dict(m.attn.state_dict())
-        new_multihead_attention.in_proj_weight = nn.Parameter(m.attn.in_proj_weight.data[:, :new_embed_dim])
-        new_multihead_attention.in_proj_bias = nn.Parameter(m.attn.in_proj_bias.data[:])
-
-        new_multihead_attention.out_proj.out_features = new_embed_dim
-        new_multihead_attention.out_proj.weight = nn.Parameter(m.attn.out_proj.weight[:new_embed_dim, :])
-        new_multihead_attention.out_proj.bias = nn.Parameter(m.attn.out_proj.bias[:new_embed_dim])
-
-        m.attn.embed_dim = new_embed_dim
-        old_attn = m.attn 
-        m.attn = new_multihead_attention
-        del old_attn
-
-        m.ln_2.normalized_shape = (new_embed_dim,)
-        m.ln_2.weight = nn.Parameter(m.ln_2.weight[:new_embed_dim])
-        m.ln_2.bias = nn.Parameter(m.ln_2.bias[:new_embed_dim])
-
-        m.mlp.c_fc.in_features = new_embed_dim
-        m.mlp.c_fc.weight = nn.Parameter(m.mlp.c_fc.weight[:, :new_embed_dim])
-
-        m.mlp.c_proj.out_features = new_embed_dim
-        m.mlp.c_proj.weight = nn.Parameter(m.mlp.c_proj.weight[:new_embed_dim, :])
-        m.mlp.c_proj.bias = nn.Parameter(m.mlp.c_proj.bias[:new_embed_dim])
-
-    return model
-
-def trim_ffn(model, percentage_ffn):
-    import torch
-    from torch import nn
-    import torch.nn.utils.prune as prune
-    import torch.nn.functional as F
-
-    for m in model:
-        prune_amount = 1.0 - percentage_ffn
-        m.mlp.c_fc = prune.ln_structured(m.mlp.c_fc, 'weight', amount=prune_amount, dim=0, n=float('-inf'))
-        mask = m.mlp.c_fc.weight_mask
-        # # Apply the same mask to the bias term
-        # m.mlp.c_fc.bias.data[mask[:, 0] == 0] = 0
-        
-        prune.remove(m.mlp.c_fc, 'weight')
-
-        # Create a boolean mask to select non-zero rows
-        non_zero_rows = torch.sum(mask, dim=1) > 0
-        print(non_zero_rows)
-
-        # Apply the masks to the weight tensor
-        out_features = int(m.mlp.c_fc.out_features * percentage_ffn)
-        m.mlp.c_fc.out_features = out_features
-        m.mlp.c_fc.weight = nn.Parameter(m.mlp.c_fc.weight[non_zero_rows, :])
-        m.mlp.c_fc.bias = nn.Parameter(m.mlp.c_fc.bias[non_zero_rows])
-
-        m.mlp.c_proj.in_features = out_features
-        m.mlp.c_proj.weight = nn.Parameter(m.mlp.c_proj.weight[:, non_zero_rows])
-
-        # out_features = int(m.mlp.c_fc.out_features * percentage_ffn)
-        # m.mlp.c_fc.out_features = out_features
-        # m.mlp.c_fc.weight = nn.Parameter(m.mlp.c_fc.weight[:out_features, :])
-        # m.mlp.c_fc.bias = nn.Parameter(m.mlp.c_fc.bias[:out_features])
-
-        # m.mlp.c_proj.in_features = out_features
-        # m.mlp.c_proj.weight = nn.Parameter(m.mlp.c_proj.weight[:, :out_features])
-    return model
-
-def trim_num_heads_text(model, percentage_head):
-
-
-    for m in model.transformer.resblocks:
-        embed_dim = m.attn.out_proj.in_features
-        num_attn_heads = m.attn.num_heads
-        new_attn_heads = int(num_attn_heads * percentage_head)
-        head_dim = int(embed_dim / num_attn_heads)
-        new_qkv_dim = int(new_attn_heads * head_dim)
-        
-
-        # create a new MultiheadAttention module with the desired embedding dimension
-        # new_multihead_attention = nn.MultiheadAttention(embed_dim=512, num_heads=m.attn.num_heads)
-        new_multihead_attention = MultiheadAttentionSuper(super_embed_dim=embed_dim, is_encoder=True, num_heads=new_attn_heads, qkv_dim=new_qkv_dim)
-
-
-        # new_multihead_attention.load_state_dict(m.attn.state_dict())
-
-        q_in_weight = m.attn.in_proj_weight.data[:new_qkv_dim, :].clone()
-        k_in_weight = m.attn.in_proj_weight.data[embed_dim:embed_dim + new_qkv_dim, :].clone()
-        v_in_weight = m.attn.in_proj_weight.data[embed_dim*2:embed_dim*2 + new_qkv_dim, :].clone()
-        new_multihead_attention.in_proj_weight.data = torch.cat((q_in_weight, k_in_weight, v_in_weight), axis=0)
-
-
-        new_multihead_attention.in_proj_bias = nn.Parameter(m.attn.in_proj_bias.data[:])
-
-        q_in_weight = m.attn.in_proj_bias.data[:new_qkv_dim].clone()
-        k_in_weight = m.attn.in_proj_bias.data[embed_dim:embed_dim + new_qkv_dim].clone()
-        v_in_weight = m.attn.in_proj_bias.data[embed_dim*2:embed_dim*2 + new_qkv_dim].clone()
-        new_multihead_attention.in_proj_bias.data = torch.cat((q_in_weight, k_in_weight, v_in_weight), axis=0)
-
-        new_multihead_attention.out_proj.in_features = new_qkv_dim
-        new_multihead_attention.out_proj.weight = nn.Parameter(m.attn.out_proj.weight[:, :new_qkv_dim])
-        new_multihead_attention.out_proj.bias = nn.Parameter(m.attn.out_proj.bias[:])
-
-        m.attn.num_heads = new_attn_heads
-        m.attn = new_multihead_attention
-
-
-    return model
-
-def trim_num_heads_vision(model, percentage_head):
-    
-
-    for m in model.transformer.resblocks:
-        embed_dim = m.attn.out_proj.in_features
-        num_attn_heads = m.attn.num_heads
-        new_attn_heads = int(num_attn_heads * percentage_head)
-        head_dim = int(embed_dim / num_attn_heads)
-        new_qkv_dim = int(new_attn_heads * head_dim)
-        
-
-        # create a new MultiheadAttention module with the desired embedding dimension
-        # new_multihead_attention = nn.MultiheadAttention(embed_dim=512, num_heads=m.attn.num_heads)
-        new_multihead_attention = MultiheadAttentionSuper(super_embed_dim=embed_dim, is_encoder=True, num_heads=new_attn_heads, qkv_dim=new_qkv_dim)
-        # new_multihead_attention.load_state_dict(m.attn.state_dict())
-
-        q_in_weight = m.attn.in_proj_weight.data[:new_qkv_dim, :]
-        k_in_weight = m.attn.in_proj_weight.data[embed_dim:embed_dim + new_qkv_dim, :]
-        v_in_weight = m.attn.in_proj_weight.data[embed_dim*2:embed_dim*2 + new_qkv_dim, :]
-        new_multihead_attention.in_proj_weight.data = torch.cat((m.attn.in_proj_weight.data[:new_qkv_dim, :], m.attn.in_proj_weight.data[embed_dim:embed_dim + new_qkv_dim, :], m.attn.in_proj_weight.data[embed_dim*2:embed_dim*2 + new_qkv_dim, :]), axis=0)
-
-
-        new_multihead_attention.in_proj_bias = nn.Parameter(m.attn.in_proj_bias.data[:])
-
-        q_in_weight = m.attn.in_proj_bias.data[:new_qkv_dim]
-        k_in_weight = m.attn.in_proj_bias.data[embed_dim:embed_dim + new_qkv_dim]
-        v_in_weight = m.attn.in_proj_bias.data[embed_dim*2:embed_dim*2 + new_qkv_dim]
-        new_multihead_attention.in_proj_bias.data = torch.cat((q_in_weight, k_in_weight, v_in_weight), axis=0)
-
-        new_multihead_attention.out_proj.in_features = new_qkv_dim
-        new_multihead_attention.out_proj.weight = nn.Parameter(m.attn.out_proj.weight[:, :new_qkv_dim])
-        new_multihead_attention.out_proj.bias = nn.Parameter(m.attn.out_proj.bias[:])
-
-        m.attn.num_heads = new_attn_heads
-        m.attn = new_multihead_attention
-
-
-    return model
-
 
 if __name__ == "__main__":
     main(sys.argv[1:])
