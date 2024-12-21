@@ -1,2 +1,0 @@
-technology,latency,datawidth,n_inputs,n_outputs,action,energy,area
-45nm,5ns,16,4,4,transfer_random|read|write|leak|update,3.5,0
