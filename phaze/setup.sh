@@ -28,7 +28,6 @@ pip install gurobipy
 git clone https://github.com/NVIDIA/apex
 cd apex
 pip3 install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --global-option="--cpp_ext" --global-option="--cuda_ext" ./
-cp -r third_party_for_phaze/phaze-megatron-lm/megatron/*  /private/home/irenewang/.conda/envs/phaze_env/lib/python3.9/site-packages/megatron/
 
 ######################################################
 
