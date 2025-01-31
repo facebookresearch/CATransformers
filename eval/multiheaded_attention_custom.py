@@ -1,4 +1,17 @@
-# This cusome multiheaded_attention is edited based on prior work HAT
+"""
+# This custom multiheaded_attention is edited based on prior work HAT. 
+# We do this so that only the embedding dimension is pruned, but the total QKV dimension remains the same
+# the QKV dimension is fixed for each attention head, and is only pruned, by pruning the number of heads. 
+#
+# HAT: Hardware-Aware Transformers for Efficient Natural Language Processing
+# Hanrui Wang, Zhanghao Wu, Zhijian Liu, Han Cai, Ligeng Zhu, Chuang Gan and Song Han
+# The 58th Annual Meeting of the Association for Computational Linguistics (ACL), 2020.
+# Paper: https://arxiv.org/abs/2005.14187
+# Project page: https://hanruiwang.me/project_pages/hat/
+"""
+
+# This custom multiheaded_attention is edited based on prior work HAT
+#
 # HAT: Hardware-Aware Transformers for Efficient Natural Language Processing
 # Hanrui Wang, Zhanghao Wu, Zhijian Liu, Han Cai, Ligeng Zhu, Chuang Gan and Song Han
 # The 58th Annual Meeting of the Association for Computational Linguistics (ACL), 2020.

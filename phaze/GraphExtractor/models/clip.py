@@ -24,7 +24,7 @@ if is_torch_fx_available():
 
 
 class ClipIR(BaseModelIR):
-    def __init__(self, model_name="clip", tmp_width=1, model_config=None):
+    def __init__(self, model_name="clip", tmp_width=1, model_config=None, pretrained="openai/clip-vit-base-patch16"):
         super().__init__(model_name, tmp_width, model_config)
 
         self.out_dir = None
@@ -33,6 +33,7 @@ class ClipIR(BaseModelIR):
         self.out_dir = self.create_out_dir()
         self.num_text_layers = 12
         self.num_vision_layers = 12
+        self.pretrained = pretrained
 
         if(self.model_config!=None):
             self.num_text_layers = self.model_config['num_hidden_layers']
@@ -43,17 +44,14 @@ class ClipIR(BaseModelIR):
         self.trace_only_model = True
 
         if self.model_name == "clip":
-            # 
-            # self.model = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
-            # Initializing a CLIPConfig with openai/clip-vit-base-patch32 style configuration
             if(self.model_config!=None):
-                text_configuration = CLIPTextConfig.from_pretrained("openai/clip-vit-base-patch16",hidden_size=self.model_config['hidden_size'],
+                text_configuration = CLIPTextConfig.from_pretrained(self.pretrained,hidden_size=self.model_config['hidden_size'],
                                                         num_hidden_layers=self.model_config['num_hidden_layers'], 
                                                         intermediate_size=self.model_config['intermediate_size'], num_attention_heads=self.model_config['num_attn_heads'])
-                vision_configuration = CLIPVisionConfig.from_pretrained("openai/clip-vit-base-patch16",hidden_size=self.model_config['vision_hidden_size'],
+                vision_configuration = CLIPVisionConfig.from_pretrained(self.pretrained,hidden_size=self.model_config['vision_hidden_size'],
                                                         num_hidden_layers=self.model_config['vision_num_hidden_layers'], 
                                                         intermediate_size=self.model_config['vision_intermediate_size'], num_attention_heads=self.model_config['vision_num_attn_heads'])
-                configuration = CLIPConfig.from_pretrained("openai/clip-vit-base-patch16", text_config=text_configuration, vision_config=vision_configuration, attn_implementation="eager")
+                configuration = CLIPConfig.from_pretrained(self.pretrained, text_config=text_configuration, vision_config=vision_configuration, attn_implementation="eager")
 
 
                 # Initializing a CLIPModel (with random weights) from the openai/clip-vit-base-patch32 style configuration
@@ -62,19 +60,25 @@ class ClipIR(BaseModelIR):
 
                 self.model = CLIPModelCustom(configuration)
             else:
-                self.model = CLIPModel.from_pretrained("openai/clip-vit-base-patch16", attn_implementation="eager")
-            # Accessing the model configuration
-
-            # new_multihead_attention = CLIPAttentionCustom(text_configuration)
-            # for m in self.model.text_model.encoder.layers:
-            #     m.self_attn = new_multihead_attention
-
-            # new_vision_multihead_attention = CLIPAttentionCustom(vision_configuration)
-            # for m in self.model.vision_model.encoder.layers:
-            #     m.self_attn = new_vision_multihead_attention
+                self.model = CLIPModel.from_pretrained(self.pretrained, attn_implementation="eager")
+                self.num_vision_layers = len(self.model.vision_model.encoder.layers)
+                # Get the number of hidden layers in the text encoder (Transformer)
+                self.num_text_layers  = len(self.model.text_model.encoder.layers)
 
             print(self.model)
-            self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch16")
+            param_size = 0
+            num_parameters = 0
+            for param in self.model.parameters():
+                param_size += param.nelement() * param.element_size()
+                num_parameters +=param.nelement()
+            buffer_size = 0
+            for buffer in self.model.buffers():
+                buffer_size += buffer.nelement() * buffer.element_size()
+            size_all_mb = (param_size + buffer_size) / 1024**2
+            print('model size: {:.3f}MB'.format(size_all_mb))
+            print('num Param: {:.3f}M'.format(num_parameters/ 1024**2))
+            model_size = '{:.3f}MB'.format(size_all_mb)
+            self.processor = CLIPProcessor.from_pretrained(self.pretrained)
         else:
             raise TypeError("Model type not found in clip", self.model_name)
 
@@ -154,9 +158,9 @@ class ClipIR(BaseModelIR):
     def create_graph_from_symbolic_trace(self):
         super().create_graph_from_symbolic_trace()
 
-    def extract_model_graph(self, micro_batch_size=1, sequence_length=64, force_reextract_model=False,model_config=None):
+    def extract_model_graph(self, micro_batch_size=1, sequence_length=64, force_reextract_model=False,model_config=None, pretrained=None):
         self.load_language_model(
-            self.out_dir, micro_batch_size, sequence_length, force_reextract_model, model_config=model_config)
+            self.out_dir, micro_batch_size, sequence_length, force_reextract_model, model_config=model_config, pretrained=pretrained)
     
     def generate_layer_info(self):
         g = self.phazegraph

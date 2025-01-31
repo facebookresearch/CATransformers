@@ -1,3 +1,8 @@
+"""
+In this file we initialize the required files to run MoPE-CLIP based pruning for the number of heads and FFN dimension 
+only needs to be ran one for each model architecture
+"""
+
 from pruning import trim_attn_head_idx, trim_ffn_idx
 from model_eval import eval_retreival, eval_zeroShotClassification
 import csv, json
@@ -27,32 +32,6 @@ def init_importance(model, transform):
     rank_ffn_dim(model, transform, 'vision')
 
     return text_ffn_ranking, vision_ffn_ranking, text_head_ranking, vision_head_ranking
-
-# def rank_text_layers(model): 
-#     importance_scores = []
-#     num_layer = len(model.transformer.resblocks)
-#     original_resblock = model.transformer.resblocks
-#     for i in num_layer:
-#         model.transformer.resblocks = pruning.trim_specific_layer(original_resblock, i)
-#         # evaluate the pruned model 
-#         result = evaluate_model(model)
-#         #rank 
-#         importance_scores.append((i, result))
-#     importance_scores = sorted(importance_scores, key=lambda x: x[1], reverse=True)
-#     text_layer_ranking = importance_scores
-
-# def rank_vision_layers(model): 
-#     importance_scores = []
-#     num_layer = len(model.visual.transformer.resblocks)
-#     original_resblock = model.visual.transformer.resblocks
-#     for i in num_layer:
-#         model.visual.transformer.resblocks = pruning.trim_specific_layer(original_resblock, i)
-#         # evaluate the pruned model 
-#         result = evaluate_model(model)
-#         #rank 
-#         importance_scores.append((i, result))
-#     importance_scores = sorted(importance_scores, key=lambda x: x[1], reverse=True)
-#     vision_layer_ranking = importance_scores
 
 def rank_attn_heads(model, transform,  v_or_t="text"):
     layer_blocks = model.transformer.resblocks if v_or_t == "text" else model.visual.transformer.resblocks

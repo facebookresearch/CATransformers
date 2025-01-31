@@ -111,7 +111,7 @@ class BaseModelIR:
 
         return g.get_memory_footprint()
 
-    def set_model(self, model_config=None):
+    def set_model(self):
         raise NotImplementedError("Must override set_model")
 
     def obtain_symbolic_trace_model(self, micro_batch_size, sequence_length):
@@ -126,9 +126,14 @@ class BaseModelIR:
     def get_layer_id(self, node, curr_layer_id=-1):
         raise NotImplementedError("Must override get_layer_id")
 
-    def load_language_model(self, out_dir, micro_batch_size=1, sequence_length=64, force_reextract_model=False, model_config=None):
+    def load_language_model(self, out_dir, micro_batch_size=1, sequence_length=64, force_reextract_model=False, model_config=None, pretrained=None):
 
         module_type_str = ""
+        if (pretrained != None):
+            pretrained_string = pretrained.replace("/", "_")
+            pretrained_string = pretrained_string.replace(".", "_")
+            module_type_str = module_type_str + "_"+ pretrained_string
+
         if (model_config != None):
             for key, item in model_config.items():
                 module_type_str = module_type_str + "_"+ key + str(item)

@@ -15,7 +15,6 @@ def main(args):
     phaze_max_tmpc = args.phaze_max_tmp_width
     force_reextract_model = args.force_reextract_model
     force_reextract_estimates = args.force_reextract_estimates
-    parallel_num = args.parallel_num
     print(force_reextract_model)
     hbm_size_list = args.phaze_hbm_size
     model_config = None
@@ -29,6 +28,9 @@ def main(args):
         model_config["vision_intermediate_size"] = args.vision_intermediate_size
         model_config["vision_hidden_size"] = args.vision_hidden_size
         model_config["vision_num_attn_heads"] = args.vision_num_attn_heads
+    pretrained=None
+    if args.pretrained: 
+        pretrained = args.pretrained
     
     assert set(phaze_model_names).issubset(
         set(supported_models)
@@ -53,7 +55,7 @@ def main(args):
     elif phaze_exec_type == "estimate_carbon":
         for micro_batch_size in phaze_mbs:
             for hbm_size in hbm_size_list:
-                estimate_total_carbon(phaze_model_names, phaze_max_tmpc, micro_batch_size, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, model_config, None, parallel_num)
+                estimate_total_carbon(phaze_model_names, phaze_max_tmpc, micro_batch_size, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, model_config, None, pretrained)
 
     elif phaze_exec_type == "run_solver":
 
@@ -121,6 +123,6 @@ if __name__ == "__main__":
     main(args)
 
 
-def estimate_carbon(phaze_model_names, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, hw_config, model_config):
-   carbon, latency, area = estimate_total_carbon(phaze_model_names, 1, 1, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, model_config, hw_config, 1)
-   return carbon, latency, area
+def estimate_carbon(phaze_model_names, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, hw_config, model_config, pretrained=None):
+   carbon, latency, area, energy = estimate_total_carbon(phaze_model_names, 1, 1, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, model_config, hw_config, pretrained)
+   return carbon, latency, area, energy

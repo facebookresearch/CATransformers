@@ -1,9 +1,20 @@
+"""
+This file provides several methods to prune the vision and text transformers of a CLIP model
+Namely it supports:
+-  pruning number of layers from the middile, or based on cosine-similarity importance
+- Pruning embedding dimensions from the back
+- Pruning FFN dimensions from the back, importance based (from MoPE-CLIP), or prune out specific block based on index
+- Pruning number of Attention Heads from the back, or importance based (from MoPE-CLIP)
+
+using MOPE based pruning must first initialize the MoPE files to rank the importance of each block placed in /mope directory
+"""
 import os
 from pathlib import Path
 import torch
 from torch.nn.utils import prune
 import torch.nn as nn
 import json
+import sys
 
 from eval.multiheaded_attention_custom import MultiheadAttentionSuper
 
@@ -28,19 +39,23 @@ def prune_model(model, transform, text_layer, text_embedding_dim, text_ffn_dim, 
     vision_head_path = os.path.join(mope_dir, "ranking_head_vision.json")
     
 
-    with open(text_ffn_path, "r") as f:
+    try:
+        with open(text_ffn_path, "r") as f:
         # Load the JSON data from the file
-        text_ffn_ranking = json.load(f)
-    with open(vision_ffn_path, "r") as f:
-    # Load the JSON data from the file
-        vision_ffn_ranking = json.load(f)
-    with open(text_head_path, "r") as f:
-    # Load the JSON data from the file
-        text_head_ranking = json.load(f)
-    with open(vision_head_path, "r") as f:
-    # Load the JSON data from the file
-        vision_head_ranking = json.load(f)
-
+            text_ffn_ranking = json.load(f)
+        with open(vision_ffn_path, "r") as f:
+        # Load the JSON data from the file
+            vision_ffn_ranking = json.load(f)
+        with open(text_head_path, "r") as f:
+        # Load the JSON data from the file
+            text_head_ranking = json.load(f)
+        with open(vision_head_path, "r") as f:
+        # Load the JSON data from the file
+            vision_head_ranking = json.load(f)
+    except:
+        print(f"Error: Unable to loadat least one MoPE-CLIP importance files.")
+        print(f"Please make sure you have ran \" python init_importance.py\" before pruning.")
+        sys.exit(1)
 
     model.transformer.resblocks = trim_ffn_mope(model.transformer.resblocks, text_ffn_dim, block_num=8, v_or_t='text')
     model.visual.transformer.resblocks = trim_ffn_mope(model.visual.transformer.resblocks, vision_ffn_dim, block_num=8, v_or_t='vision')
@@ -53,11 +68,9 @@ def prune_model(model, transform, text_layer, text_embedding_dim, text_ffn_dim, 
 
     return model
 
-
+ # drop layers in the middle 
 def trim_layers(model, new_num_layers):
     num_layers = len(model)
-
-    # drop layers in the middle 
     front_layers = int(new_num_layers / 2)
     back_layers = int(0-(new_num_layers - front_layers))
     model = model[:front_layers] + model[back_layers:]
@@ -68,7 +81,7 @@ def trim_specific_layer(model, layer_idx):
     new_model = model[:layer_idx] + model[layer_idx + 1:]
     return new_model
 
-
+# drop layers based in cosine similarity
 def trim_layers_importance(model, new_num_layers, v_or_t='text'):
     importance_scores = []
     src = torch.rand(1, 10, model[0].attn.out_proj.out_features) if v_or_t=='text' else torch.rand(1, 10, model[0].attn.out_proj.out_features)
@@ -81,8 +94,6 @@ def trim_layers_importance(model, new_num_layers, v_or_t='text'):
         src = out
 
     importance_scores = sorted(importance_scores, key=lambda x: x[1], reverse=True)
-    
-
 
     num_layers = len(model)
     remove_idx_list = []
@@ -91,33 +102,19 @@ def trim_layers_importance(model, new_num_layers, v_or_t='text'):
         index, _ = importance_scores[i]
         remove_idx_list.append(index)
 
-    # mask = torch.ones(num_layers, dtype=torch.bool)
-    # mask[remove_idx_list] = False
-    # print(mask)
-
-    # model = model[mask]
-
     remove_idx_list = sorted(remove_idx_list, reverse=True)
-    # print(remove_idx_list)
     for indx in remove_idx_list:
 
         # checking whether the corresponding iterator index is less than the list length
         if indx < num_layers:
-
             # removing element by index using pop() function
             model = model[:indx] + model[indx+1:]
-    # # drop layers in the middle 
-    # front_layers = math.ceil(new_num_layers / 2)
-    # back_layers = int(0-(new_num_layers - front_layers))
-    # model = model[:front_layers] + model[back_layers:]
     return model
 
-
+# Trim embedding dimension for vision transformer (from the end)
 def trim_embed_vision(model, new_embed_dim, training=False):
     
     embed_dim = model.conv1.out_channels
-        
-
     model.positional_embedding.embedding_dim = new_embed_dim
     model.positional_embedding.data = nn.Parameter(model.positional_embedding.data[:, :new_embed_dim])
 
@@ -127,7 +124,6 @@ def trim_embed_vision(model, new_embed_dim, training=False):
 
     model.conv1.out_channels = new_embed_dim
     model.conv1.weight = nn.Parameter(model.conv1.weight[:new_embed_dim, :])
-    # model.conv1.bias = nn.Parameter(model.conv1.bias[:new_embed_dim])
     
     model.ln_pre.normalized_shape = (new_embed_dim,)
     model.ln_pre.weight = nn.Parameter(model.ln_pre.weight[:new_embed_dim])
@@ -165,7 +161,6 @@ def trim_embed_vision(model, new_embed_dim, training=False):
         m.ln_2.weight = nn.Parameter(m.ln_2.weight[:new_embed_dim])
         m.ln_2.bias = nn.Parameter(m.ln_2.bias[:new_embed_dim])
 
-
         m.mlp.c_fc.in_features = new_embed_dim
         m.mlp.c_fc.weight = nn.Parameter(m.mlp.c_fc.weight[:, :new_embed_dim])
 
@@ -175,6 +170,7 @@ def trim_embed_vision(model, new_embed_dim, training=False):
 
     return model
 
+# Trim embedding dimension for text transformer (from the end)
 def trim_embed_text(model, new_embed_dim, training=False):
     embed_dim = model.token_embedding.embedding_dim 
 
@@ -189,7 +185,6 @@ def trim_embed_text(model, new_embed_dim, training=False):
     model.ln_final.bias = nn.Parameter(model.ln_final.bias[:new_embed_dim])
 
     model.text_projection.data = nn.Parameter(model.text_projection.data[:new_embed_dim, :])
-    # model.visual.proj.data = nn.Parameter(model.visual.proj.data[:, :new_embed_dim])
 
     for m in model.transformer.resblocks:
         m.ln_1.normalized_shape = (new_embed_dim,)
@@ -229,6 +224,7 @@ def trim_embed_text(model, new_embed_dim, training=False):
 
     return model
 
+# Trim ffn dimension (from the end)
 def trim_ffn_back(model, new_ffn_dim):
 
     for m in model:
@@ -251,19 +247,9 @@ def trim_ffn_back(model, new_ffn_dim):
 
         m.mlp.c_proj.in_features = out_features
         m.mlp.c_proj.weight = nn.Parameter(m.mlp.c_proj.weight[:, non_zero_rows])
-
-
-        
-        # out_features = int(m.mlp.c_fc.out_features * percentage_ffn)
-        # m.mlp.c_fc.out_features = out_features
-        # m.mlp.c_fc.weight = nn.Parameter(m.mlp.c_fc.weight[:out_features, :])
-        # m.mlp.c_fc.bias = nn.Parameter(m.mlp.c_fc.bias[:out_features])
-
-        # m.mlp.c_proj.in_features = out_features
-        # m.mlp.c_proj.weight = nn.Parameter(m.mlp.c_proj.weight[:, :out_features])
     return model
 
-
+# Trim the number of of text transformer (from the end)
 def trim_num_heads_text(model, new_attn_heads, training=False):
     
     for m in model.transformer.resblocks:
@@ -304,6 +290,7 @@ def trim_num_heads_text(model, new_attn_heads, training=False):
 
     return model
 
+# Trim the number of of vision transformer (from the end)
 def trim_num_heads_vision(model, new_attn_heads, training=False):
     
 
@@ -316,17 +303,12 @@ def trim_num_heads_vision(model, new_attn_heads, training=False):
         
 
         # create a new MultiheadAttention module with the desired embedding dimension
-        # new_multihead_attention = nn.MultiheadAttention(embed_dim=512, num_heads=m.attn.num_heads)
         new_multihead_attention = MultiheadAttentionSuper(super_embed_dim=embed_dim, is_encoder=True, num_heads=new_attn_heads, qkv_dim=new_qkv_dim,  batchFirst=training)
-
-
-        # new_multihead_attention.load_state_dict(m.attn.state_dict())
 
         q_in_weight = m.attn.in_proj_weight.data[:new_qkv_dim, :].clone()
         k_in_weight = m.attn.in_proj_weight.data[embed_dim:embed_dim + new_qkv_dim, :].clone()
         v_in_weight = m.attn.in_proj_weight.data[embed_dim*2:embed_dim*2 + new_qkv_dim, :].clone()
         new_multihead_attention.in_proj_weight.data = torch.cat((q_in_weight, k_in_weight, v_in_weight), axis=0)
-
 
         new_multihead_attention.in_proj_bias = nn.Parameter(m.attn.in_proj_bias.data[:])
 
@@ -346,22 +328,12 @@ def trim_num_heads_vision(model, new_attn_heads, training=False):
     return model
 
 
-
+# trim out a specific block of the ffn dimension (based on a given index number of the block)
 def trim_ffn_idx(mlp, ffn_idx, block_num=8):
     block_size = int(mlp.c_fc.out_features/block_num)
     mlp.c_fc.out_features
     start_idx = ffn_idx * block_size
     end_index = start_idx + block_size
-
-    # mlp.c_fc = prune.ln_structured(m.mlp.c_fc, 'weight', amount=prune_amount, dim=0, n=float('-inf'))
-    # mask = mlp.c_fc.weight_mask
-    # # Apply the same mask to the bias term
-    # m.mlp.c_fc.bias.data[mask[:, 0] == 0] = 0
-    
-    # prune.remove(mlp.c_fc, 'weight')
-
-    # Create a boolean mask to select non-zero rows
-    # non_zero_rows = torch.sum(mask, dim=1) > 0
 
     mask = torch.ones(mlp.c_fc.out_features, dtype=torch.bool)
     mask[start_idx:end_index] = False
@@ -378,40 +350,7 @@ def trim_ffn_idx(mlp, ffn_idx, block_num=8):
 
     return mlp
 
-def trim_ffn_mope(model, new_ffn_dim, block_num=8, v_or_t='text'):
-    # num_blocks_to_prune = int (block_num * (1-percentage_ffn))
-
-    ranking_list = text_ffn_ranking if v_or_t == "text" else vision_ffn_ranking
-
-    for layer_num, m in enumerate(model):
-        block_size = int(m.mlp.c_fc.out_features/block_num)
-        num_blocks_to_prune = int(block_num - (new_ffn_dim // block_size))
-        _, importance_scores = ranking_list[layer_num]
-        remove_idx_list = []
-
-        for i in range(num_blocks_to_prune):
-            index, _ = importance_scores[i]
-            remove_idx_list.append(index)
-
-        block_size = int(m.mlp.c_fc.out_features/block_num)
-        mask = torch.ones(m.mlp.c_fc.out_features, dtype=torch.bool)
-        for ffn_idx in remove_idx_list:
-            start_idx = ffn_idx * block_size
-            end_index = start_idx + block_size
-            mask[start_idx:end_index] = False
-
-        # Apply the masks to the weight tensor
-        out_features = int(m.mlp.c_fc.out_features  -  num_blocks_to_prune * block_size)
-        m.mlp.c_fc.out_features = out_features
-
-        m.mlp.c_fc.weight = nn.Parameter(m.mlp.c_fc.weight[mask, :])
-        m.mlp.c_fc.bias = nn.Parameter(m.mlp.c_fc.bias[mask])
-
-        m.mlp.c_proj.in_features = out_features
-        m.mlp.c_proj.weight = nn.Parameter(m.mlp.c_proj.weight[:, mask])
-    return model
-
-
+# trim out a specific attention head given its index
 def trim_attn_head_idx(attn, head_idx):
 
     embed_dim = attn.out_proj.in_features 
@@ -463,7 +402,41 @@ def trim_attn_head_idx(attn, head_idx):
     attn = new_multihead_attention
     return attn
 
+# trim out FFN blocks using importance based pruning introduced in MoPE-CLIP
+def trim_ffn_mope(model, new_ffn_dim, block_num=8, v_or_t='text'):
+    # num_blocks_to_prune = int (block_num * (1-percentage_ffn))
 
+    ranking_list = text_ffn_ranking if v_or_t == "text" else vision_ffn_ranking
+
+    for layer_num, m in enumerate(model):
+        block_size = int(m.mlp.c_fc.out_features/block_num)
+        num_blocks_to_prune = int(block_num - (new_ffn_dim // block_size))
+        _, importance_scores = ranking_list[layer_num]
+        remove_idx_list = []
+
+        for i in range(num_blocks_to_prune):
+            index, _ = importance_scores[i]
+            remove_idx_list.append(index)
+
+        block_size = int(m.mlp.c_fc.out_features/block_num)
+        mask = torch.ones(m.mlp.c_fc.out_features, dtype=torch.bool)
+        for ffn_idx in remove_idx_list:
+            start_idx = ffn_idx * block_size
+            end_index = start_idx + block_size
+            mask[start_idx:end_index] = False
+
+        # Apply the masks to the weight tensor
+        out_features = int(m.mlp.c_fc.out_features  -  num_blocks_to_prune * block_size)
+        m.mlp.c_fc.out_features = out_features
+
+        m.mlp.c_fc.weight = nn.Parameter(m.mlp.c_fc.weight[mask, :])
+        m.mlp.c_fc.bias = nn.Parameter(m.mlp.c_fc.bias[mask])
+
+        m.mlp.c_proj.in_features = out_features
+        m.mlp.c_proj.weight = nn.Parameter(m.mlp.c_proj.weight[:, mask])
+    return model
+
+# trim out attention heads using importance based pruning introduced in MoPE-CLIP
 def trim_attn_head_mope(model, new_attn_heads, v_or_t='text', training=False):
 
     ranking_list = text_head_ranking if v_or_t == "text" else vision_head_ranking
@@ -493,9 +466,6 @@ def trim_attn_head_mope(model, new_attn_heads, v_or_t='text', training=False):
 
 
         new_multihead_attention = MultiheadAttentionSuper(super_embed_dim=embed_dim, is_encoder=True, num_heads=new_attn_heads, qkv_dim=new_qkv_dim, batchFirst=training)
-
-
-        # new_multihead_attention.load_state_dict(m.attn.state_dict())
 
         q_in_weight = m.attn.in_proj_weight.data[:embed_dim, :]
         q_in_weight = q_in_weight[mask, :]

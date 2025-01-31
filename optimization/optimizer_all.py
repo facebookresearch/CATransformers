@@ -8,7 +8,7 @@ from ax.service.utils.report_utils import exp_to_df
 
 from eval import model_eval, model_constants
 from phaze import main
-from configurations import TEXT_MODEL_PARAMS, VISION_MODEL_PARAMS, HW_PARAMS, NUM_TRIALS, AREA_CONSTRAINT, AREA_CONSTRAINT_VALUE
+from configurations import TEXT_MODEL_PARAMS, VISION_MODEL_PARAMS, HW_PARAMS, NUM_TRIALS, AREA_CONSTRAINT, AREA_CONSTRAINT_VALUE, MAX_TOPS, MAX_TOPS_CONSTRAINT, FREQUENCY
 import csv, os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -25,8 +25,11 @@ def model_carbon(model_param, hw_param) -> float:
         hbm_size = 1
 
         # model, phaze_seq_len, force_reextract_model, hbm_size, hw_param, model_param
-        carbon, latency, area = main.estimate_carbon(model, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, hw_param, model_param)
-        return carbon, latency, area
+        carbon, latency, area, energy = main.estimate_carbon(model, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, hw_param, model_param, "openai/clip-vit-base-patch32")
+        return carbon, latency, area, energy
+
+def calc_tops(hw_param) -> float:
+    return (hw_param["num_tc"] * hw_param["width"] * hw_param["depth"] * 2 * FREQUENCY) / (1000**4)
 
 # Evaluation Function
 def evaluate(trial, parameters, csv_file_name):
@@ -61,77 +64,14 @@ def evaluate(trial, parameters, csv_file_name):
     model_config["vision_num_attn_heads"] = parameters.get("vision_num_attn_heads")
 
     accuracy, size= model_accuracy(model_config)
-    carbon, latency, area = model_carbon(model_config, hw_config)
+    carbon, latency, area, energy = model_carbon(model_config, hw_config)
+    tops = calc_tops(hw_config)
 
     with open(csv_file_name, "a", newline="") as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow([trial, accuracy, carbon, latency, parameters, size, area])
+        writer.writerow([trial, accuracy, carbon, latency, parameters, size, area, energy, tops])
 
-    return {"accuracy": (accuracy, 0.0), "carbon": (carbon, 0.0), "area": (area, 0.0), "latency": (latency,0.0)}
-
-# ### Plot Pareto Frontier
-def pareto_frontier(df, area_constraint, save_name):
-    
-    home_dir = os.getcwd()
-    directory = f"{home_dir}/results/{save_name}"
-
-    # Filter data points by area constraint
-    filtered_df = df[df['area'] <= area_constraint]
-    # Get accuracy, latency, and carbon values
-    accuracy = filtered_df['accuracy'].values
-    latency = filtered_df['latency'].values
-    carbon = filtered_df['carbon'].values
-    # Compute Pareto frontier
-    indices = []
-    for i in range(len(accuracy)):
-        is_dominated = False
-        for j in range(len(accuracy)):
-            if i != j and accuracy[j] >= accuracy[i] and latency[j] <= latency[i] and carbon[j] <= carbon[i]:
-                is_dominated = True
-                break
-        if not is_dominated:
-            indices.append(i)
-    # Get points on the Pareto frontier
-    frontier_points = filtered_df.iloc[indices]
-    frontier_points.to_csv(f"{directory}/{save_name}_curve.csv", index=False)
-
-    # plot frontier
-    plt.figure(figsize=(8, 6))
-
-    acc = frontier_points['accuracy']
-    carbon = frontier_points['carbon']
-    latency = frontier_points['latency']
-    # Create a scatter plot of Accuracy vs Carbon
-    plt.scatter(carbon, acc, c=latency, cmap='viridis')
-    # Add a colorbar to represent the Trial Numbers
-    cbar = plt.colorbar()
-    cbar.set_label('Latency')
-    # Set labels and title
-    plt.xlabel('Carbon')
-    plt.ylabel('Accuracy')
-    plt.title('Accuracy vs Carbon')
-    # Show the plot
-    plt.savefig(f"{directory}/{save_name}_acc_vs_carbon.png", dpi=300, bbox_inches='tight')
-
-    plt.cla()
-    plt.clf()
-
-    acc = df['accuracy']
-    carbon = df['carbon']
-    latency = df['latency']
-    # Create a scatter plot of Accuracy vs Carbon
-    plt.scatter(carbon, acc, c=latency, cmap='viridis')
-    # Add a colorbar to represent the Trial Numbers
-    cbar = plt.colorbar()
-    cbar.set_label('Latency')
-    # Set labels and title
-    plt.xlabel('Carbon')
-    plt.ylabel('Accuracy')
-    plt.title('Accuracy vs Carbon')
-    # Show the plot
-    plt.savefig(f"{directory}/{save_name}_acc_vs_carbon.png", dpi=300, bbox_inches='tight')
-
-    return frontier_points
+    return {"accuracy": (accuracy, 0.0), "carbon": (carbon, 0.0), "area": (area, 0.0), "latency": (latency,0.0), "energy": (energy, 0.0), "tops": (tops, 0.0)}
 
 def optimize(run_name):
     home_dir = os.getcwd()
@@ -231,15 +171,18 @@ def optimize(run_name):
         ],
         objectives={
             # `threshold` arguments are optional
-            "accuracy": ObjectiveProperties(minimize=False, threshold=0.1),
+            "accuracy": ObjectiveProperties(minimize=False, threshold=0.02),
             "latency": ObjectiveProperties(minimize=True,threshold=0.1),
-            "carbon": ObjectiveProperties(minimize=True,threshold=1.0),
+            "carbon": ObjectiveProperties(minimize=True,threshold=0.4),
         },
         outcome_constraints=[
             AREA_CONSTRAINT,
+            MAX_TOPS_CONSTRAINT,
         ],
         tracking_metric_names=[
             "area",
+            "energy",
+            "tops"
         ],
         overwrite_existing_experiment=True,
         choose_generation_strategy_kwargs={"should_deduplicate": True},
@@ -248,10 +191,11 @@ def optimize(run_name):
     # ### Run Optimization
 
     csv_file_name = f"{directory}/{run_name}.csv"
+    print(f"run: {run_name}, tops: {MAX_TOPS_CONSTRAINT}, freq: {FREQUENCY}, num_trials: {NUM_TRIALS}")
 
     with open(csv_file_name, "a", newline="") as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(["Trial Number", "Accuracy", "Carbon", "Latency", "Parameters", "Model size", "Area"])
+        writer.writerow(["Trial Number", "Accuracy", "Carbon", "Latency", "Parameters", "Model size", "Area", "Energy", "TOPs"])
 
     for i in range(NUM_TRIALS):
         try:
@@ -273,7 +217,3 @@ def optimize(run_name):
     df.to_csv(f'{directory}/data_{run_name}.csv', index=False)
 
     ax_client.save_to_json_file(filepath=f'{directory}/{run_name}.json')
-    # Set area constraint (e.g., 100)
-    area_constraint = AREA_CONSTRAINT_VALUE
-    # Compute Pareto frontier
-    frontier_points = pareto_frontier(df, area_constraint, run_name)

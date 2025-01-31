@@ -61,8 +61,11 @@ def populate_estimates(tmpc_models, max_tmp_width, micro_batch_size, sequence_le
         if (not os.path.isfile(estimate_filepath)) or force_reextract_estimates:
             if (os.path.isfile(estimate_filepath)):
                 # delete exisiting file  
-                os.remove(estimate_filepath)
-                print(f"File {estimate_filepath} deleted.")
+                try:
+                    os.remove(estimate_filepath)
+                    print(f"File {estimate_filepath} deleted.")
+                except:
+                    print(f"File {estimate_filepath} doesn't exist.")
 
             if not os.path.exists(model_estimates_dir):
                 os.makedirs(model_estimates_dir)

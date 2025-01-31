@@ -1,10 +1,10 @@
-dataset
+dataset/
 logs
 scripts
 __pycache__
 **/__pycache__/
 results
-
-
+phaze/Estimator/tmp
 phaze/Estimator/estimates/*
+phaze/Solver/out/*
 phaze/GraphExtractor/out/*

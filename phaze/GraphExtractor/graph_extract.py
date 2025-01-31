@@ -27,10 +27,14 @@ def get_tmp_widths(max_tmp_width=1):
     return tmp_widths
 
 
-def extract_graph(model_name, max_tmp_width=1, micro_batch_size=1, sequence_length=64, force_reextract_model=False,model_config=None):
+def extract_graph(model_name, max_tmp_width=1, micro_batch_size=1, sequence_length=64, force_reextract_model=False,model_config=None, pretrained=None):
     def extract_model_from_file(tmp_width):
         if not force_reextract_model:
             module_type_str = ""
+            if (pretrained != None):
+                pretrained_string = pretrained.replace("/", "_")
+                pretrained_string = pretrained_string.replace(".", "_")
+                module_type_str = module_type_str + "_"+ pretrained_string
             if (model_config != None):
                 for key, item in model_config.items():
                     module_type_str = module_type_str + "_"+ key + str(item)
@@ -113,10 +117,13 @@ def extract_graph(model_name, max_tmp_width=1, micro_batch_size=1, sequence_leng
 
         if clip:
             return [clip]
-
-        clip = ClipIR(model_name, model_config=model_config)
+        
+        if pretrained != None: # use custom pretrained model
+            clip = ClipIR(model_name, model_config=model_config, pretrained=pretrained)
+        else:
+            clip = ClipIR(model_name, model_config=model_config) # use default openai pretrained model 
         clip.extract_model_graph(
-            micro_batch_size, sequence_length, force_reextract_model, model_config=model_config)
+            micro_batch_size, sequence_length, force_reextract_model, model_config=model_config, pretrained=pretrained)
 
         return [clip]
 

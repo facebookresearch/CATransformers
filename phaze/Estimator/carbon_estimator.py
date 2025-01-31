@@ -31,7 +31,7 @@ def estimate_carbon(models_info, micro_batch_size, max_tmp_width, sequence_lengt
     while not done: 
         result = estimate_operational_carbon(models_info, next_cc)
         if result != None: 
-            operational_carbon_for_models , sequential_latency, component_carbon_per_model, component_latency_per_model = result
+            operational_carbon_for_models , sequential_latency, energy, component_carbon_per_model, component_latency_per_model = result
         else: 
             return None
         
@@ -40,17 +40,18 @@ def estimate_carbon(models_info, micro_batch_size, max_tmp_width, sequence_lengt
         for model_name, op_carbon in operational_carbon_for_models.items():
             total_carbon = (op_carbon * 30000000)  + embodied_carbon # scale op_carbon to 3 years continuous inference
             print("Carbon estimates for accelerator config:", next_cc)
-            print("operational carbon: " + str(op_carbon)+ "kg CO2")
+            print("operational carbon (one inference): " + str(op_carbon)+ "kg CO2")
             print("embodied carbon: " + str(embodied_carbon) + "kg CO2")
             print("total carbon: " + str(total_carbon) + "kg CO2")
             print("total sequantial latency: " + str(sequential_latency[model_name]) + " s")
+            print("total energy (lifetime):" + str(energy[model_name]* 30000000) + " kwh")
             print("Per component operational arbon and latency breakdown:")
             for name in component_carbon_per_model[model_name].keys():
                 print(name + ": carbon: " + str(component_carbon_per_model[model_name][name]) + ", latency: " + str(component_latency_per_model[model_name][name]))
 
             print ("-------------------------")
 
-            result = {"config": next_cc, "area": next_cc.area, "embodied":embodied_carbon, "operational":op_carbon, "total_carbon":total_carbon, "latency":sequential_latency[model_name], "breakdown":component_carbon_per_model[model_name] }
+            result = {"config": next_cc, "area": next_cc.area, "embodied":embodied_carbon, "operational":op_carbon, "total_carbon":total_carbon, "latency":sequential_latency[model_name], "breakdown":component_carbon_per_model[model_name], "energy":energy[model_name]* 30000000 }
             result_list.append(result)
             # TODO: save data into a json file
         done, next_cc, cc_iter = get_next_acc_config(next_cc, cc_iter)
@@ -62,8 +63,10 @@ def estimate_carbon(models_info, micro_batch_size, max_tmp_width, sequence_lengt
 def estimate_operational_carbon(models_info, cc):
     total_operational_carbon_per_model = {}
     total_sequential_latency_per_model = {}
+    total_energy_per_model = {}
     total_operational_carbon = 0
     total_seq_lat = 0
+    total_energy = 0
 
     total_component_carbon = {}
     total_component_latency = {}
@@ -91,22 +94,12 @@ def estimate_operational_carbon(models_info, cc):
 
                 if layer_id not in repeat_layer_ids:
 
-                    # calculate carbon once for replicated layers
-                    # as many models have replicated layers, we only execute the ILP once for the replicated layers
-
-                    ret_l_attr = {'id': layer_id}
-                    l_attr = layer_graph.nodes[layer_id]["node"]
-
-                    # ret_l_attr['activationSize'] = l_attr['activation_size'] * \
-                    #     bytes_per_element
-                    # ret_l_attr["parameterSize"] = l_attr["parameter_size"] * \
-                    #     bytes_per_element
-                    # ret_l_attr['isTensorParallelized'] = l_attr['is_tensor_parallelized']
+                    # calculate carbon once for replicated layers and multiply it at the end to all layers
 
                     per_layer_op_graph = m_per_tmpc.get_op_graph(layer_id)
                     result = op_carbon_per_layer(per_layer_op_graph, cc, latency_estimates[t])
                     if (result != None):
-                        op_carbon, latency, comp_carbon, comp_lat = result
+                        op_carbon, latency, comp_carbon, comp_lat, energy = result
                     else:
                         print("cannot find proper mapping for this configuration")
                         return None
@@ -116,6 +109,7 @@ def estimate_operational_carbon(models_info, cc):
                     if layer_id in repeat_layer_first:
                         t_op_carbon = op_carbon * (len(repeat_layer_dict[layer_id]))
                         t_seq_lat = latency * (len(repeat_layer_dict[layer_id]))
+                        t_energy = energy * (len(repeat_layer_dict[layer_id]))
                         print(layer_id)
                         print(latency)
                         print(t_seq_lat)
@@ -126,6 +120,7 @@ def estimate_operational_carbon(models_info, cc):
                     else:
                         t_op_carbon = op_carbon
                         t_seq_lat = latency 
+                        t_energy = energy 
                         for name , carbon in comp_carbon.items():
                             t_op_carbon_component[name] = carbon 
                         for name, latency in comp_lat.items():
@@ -133,6 +128,7 @@ def estimate_operational_carbon(models_info, cc):
 
                     total_operational_carbon += t_op_carbon
                     total_seq_lat += t_seq_lat
+                    total_energy += t_energy
 
                     for name, carbon in t_op_carbon_component.items():
                         total_component_carbon[name] = total_component_carbon[name] + carbon if name in total_component_carbon else carbon
@@ -141,11 +137,13 @@ def estimate_operational_carbon(models_info, cc):
 
         total_operational_carbon_per_model[model_name] = total_operational_carbon
         total_sequential_latency_per_model[model_name] = total_seq_lat
+        total_energy_per_model[model_name] = total_energy
 
         total_component_carbon_per_model[model_name] = total_component_carbon
         total_component_latency_per_model[model_name] = total_component_latency
 
-    return total_operational_carbon_per_model, total_sequential_latency_per_model, total_component_carbon_per_model, total_component_latency_per_model
+    return total_operational_carbon_per_model, total_sequential_latency_per_model, total_energy_per_model, total_component_carbon_per_model, total_component_latency_per_model
+
 
 def estimate_embodied_carbon(area, hbm):
 
@@ -263,10 +261,10 @@ def op_carbon_per_layer(l_op_graph, acc_config, latency_estimates):
     if fwd_graph == None:
         return None
 
-    carbon, latency, componentwise_carbon, componentwise_latency= calculate_carbon_from_energy(
+    carbon, latency, componentwise_carbon, componentwise_latency, energy_kwh= calculate_carbon_from_energy(
         fwd_graph)
 
-    return carbon, latency, componentwise_carbon, componentwise_latency
+    return carbon, latency, componentwise_carbon, componentwise_latency, energy_kwh
 
 
 def calculate_carbon_from_energy(graph):
@@ -296,5 +294,8 @@ def calculate_carbon_from_energy(graph):
     for component_name, component_energy in componentwise_energy.items():
         component_carbon = operational_carbon_estimate(component_energy)
         componentwise_carbon[component_name] = component_carbon
+    
+    # convert energy from Joules to kwh
+    schedule_energy_kwh = schedule_energy / 3600000
 
-    return operational_carbon, schedule_latency , componentwise_carbon, componentwise_latency
+    return operational_carbon, schedule_latency , componentwise_carbon, componentwise_latency, schedule_energy_kwh

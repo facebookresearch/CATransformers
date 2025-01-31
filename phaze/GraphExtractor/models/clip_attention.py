@@ -1,3 +1,6 @@
+### Custom CLIP attention implementation modified from Hugging Face's Transformer CLIPModel
+### THis allows us to fix the head dimension so we can have dynamic number of heads. 
+
 from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
@@ -19,7 +22,7 @@ class CLIPAttentionCustom(nn.Module):
         self.config = config
         self.embed_dim = config.hidden_size
         self.num_heads = config.num_attention_heads
-        ## fix head him so we cna have dynamic number of heads
+        ## fix head him so we can have dynamic number of heads
         self.head_dim = 64
         self.new_proj_dim = self.head_dim * self.num_heads
         # if self.head_dim * self.num_heads != self.embed_dim:

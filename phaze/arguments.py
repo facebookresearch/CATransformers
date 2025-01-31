@@ -26,33 +26,9 @@ def process_phaze_arguments():
                         \\ Default is 32GB.",)
     parser.add_argument("--config_model", type=bool, required=False, default=False,
                         help="if modifying model configuration")
-    parser.add_argument("--num_layers", type=int, required=False, default=12,
-                        help="HBM sizes to explore in GB \
-                        \\ Default is 32GB.",)
-    parser.add_argument("--intermediate_size", type=int, required=False, default=2048,
-                        help="HBM sizes to explore in GB \
-                        \\ Default is 32GB.",)
-    parser.add_argument("--hidden_size", type=int, required=False, default=512,
-                        help="HBM sizes to explore in GB \
-                        \\ Default is 32GB.",)
-    parser.add_argument("--num_attn_heads", type=int, required=False, default=768,
-                        help="HBM sizes to explore in GB \
-                        \\ Default is 32GB.",)
-    parser.add_argument("--vision_num_layers", type=int, required=False, default=12,
-                        help="HBM sizes to explore in GB \
-                        \\ Default is 32GB.",)
-    parser.add_argument("--vision_intermediate_size", type=int, required=False, default=3072,
-                        help="HBM sizes to explore in GB \
-                        \\ Default is 32GB.",)
-    parser.add_argument("--vision_hidden_size", type=int, required=False, default=768,
-                        help="HBM sizes to explore in GB \
-                        \\ Default is 32GB.",)
-    parser.add_argument("--vision_num_attn_heads", type=int, required=False, default=768,
-                        help="HBM sizes to explore in GB \
-                        \\ Default is 32GB.",)
-    parser.add_argument("--parallel_num", type=int, required=False, default=1,
-                        help="HBM sizes to explore in GB \
-                        \\ Default is 32GB.",)
+    parser.add_argument("--pretrained", type=str, required=False,
+                        help="HF link to load model architecture",)
+    
 
     args = parser.parse_args()
 

@@ -26,11 +26,12 @@ def model_carbon(model_param, hw_param) -> float:
         hbm_size = 1
 
         # model, phaze_seq_len, force_reextract_model, hbm_size, hw_param, model_param
-        carbon, latency, area, energy = main.estimate_carbon(model, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, hw_param, model_param, "openai/clip-vit-base-patch32")
+        carbon, latency, area, energy = main.estimate_carbon(model, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, hw_param, model_param)
         return carbon, latency, area, energy
 
 def calc_tops(hw_param) -> float:
     return (hw_param["num_tc"] * hw_param["width"] * hw_param["depth"] * 2 * FREQUENCY) / (1000**4)
+
 
 # Evaluation Function
 def evaluate(trial, parameters, csv_file_name):
@@ -174,8 +175,8 @@ def optimize(run_name):
         ],
         objectives={
             # `threshold` arguments are optional
-            "accuracy": ObjectiveProperties(minimize=False, threshold=0.05),
-            "carbon": ObjectiveProperties(minimize=True,threshold=0.6),
+            "accuracy": ObjectiveProperties(minimize=False, threshold=0.1),
+            "energy": ObjectiveProperties(minimize=True,threshold=1.0),
         },
         outcome_constraints=[
             AREA_CONSTRAINT,
@@ -185,7 +186,7 @@ def optimize(run_name):
         tracking_metric_names=[
             "area",
             "latency",
-            "energy", 
+            "carbon", 
             "tops"
         ],
         overwrite_existing_experiment=True,

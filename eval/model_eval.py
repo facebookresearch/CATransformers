@@ -1,37 +1,26 @@
-#
-# For licensing see accompanying LICENSE file.
-# Copyright (C) 2024 Apple Inc. All Rights Reserved.
-#
 """
+In this code, we provide functionality to evaluate the accuracy of pruned models against MSCOCO and Imagenet1k. 
+We also pretrain the pruned models then evaluate against MSCOCO
+
 Evaluation code is borrowed from https://github.com/mlfoundations/datacomp/blob/main/eval_utils/wds_eval.py
 Licensed under MIT License, see ACKNOWLEDGEMENTS for details.
 """
 
 import os
 import argparse
-import datasets
 
-import mobileclip
-from torchvision import transforms
 import torch
 from clip_benchmark.datasets.builder import build_dataset
 from clip_benchmark.metrics import zeroshot_classification as zsc
-from clip_benchmark.datasets.builder import image_captions_collate_fn
 from clip_benchmark.metrics import zeroshot_retrieval as zsr
 import open_clip
 import math
-from torch.nn.utils import prune
-import torch.nn as nn
 import time
 
 # from pruning import prune_model
 from eval.pruning import prune_model
-from eval.multiheaded_attention_custom import MultiheadAttentionSuper
 from eval.model_constants import calculate_flop, orig_models, MAX_EPOCH
 
-from transformers import CLIPProcessor, CLIPModel, CLIPConfig, CLIPVisionConfig,CLIPTextConfig
-from pathlib import Path
-import sys
 import os
 import subprocess
 
@@ -59,61 +48,61 @@ def parse_args(parser):
         type=float,
         required=False,
         default=1,
-        help="percent of layers",
+        help="new num of layers",
     )
     parser.add_argument(
         "--text-embed-dim",
         type=float,
         required=False,
-        help="percent of embedding layers",
+        help="new embedding dimension (must be a multiple of orig_dim / 8)",
     )
     parser.add_argument(
         "--text-ffn-dim",
         type=float,
         required=False,
         default=1,
-        help="percent of ffn dimension",
+        help="new FFN dimension (must be a multiple of orig_dim / 8)",
     )
     parser.add_argument(
         "--text-head-num",
         type=float,
         required=False,
         default=1,
-        help="percent of num hidden attn text",
+        help="new num attention head",
     )
     parser.add_argument(
         "--vision-layers",
         type=float,
         required=False,
         default=1,
-        help="percent of layers",
+        help="new num of layers",
     )
     parser.add_argument(
         "--vision-embed-dim",
         type=float,
         required=False,
         default=1,
-        help="percent of embedding layers",
+        help="new embedding dimension (must be a multiple of orig_dim / 8)",
     )
     parser.add_argument(
         "--vision-ffn-dim",
         type=float,
         required=False,
         default=1,
-        help="percent of ffn dimension",
+        help="new ffn dimension (must be a multiple of orig_dim / 8)",
     )
     parser.add_argument(
         "--vision-head-num",
         type=float,
         required=False,
         default=1,
-        help="percent of num hidden attn vision",
+        help="new num attention head",
     )
     parser.add_argument(
         "--load-checkpoint",
         required=False,
         default=None,
-        help="percent of layers",
+        help="path to load pretrained model from a checkoiunt",
     )
     return parser
 
@@ -190,12 +179,8 @@ def eval_retreival(task,
 def create_model(text_layer, text_embedding_dim, text_ffn_dim, text_head_num, vision_layer, vision_embedding_dim, vision_ffn_dim, vision_head_num, load_checkpoint=None):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(0)
-    # model, _, transform = mobileclip.create_model_and_transforms(
-    #     'mobileclip_s2', pretrained="/private/home/irenewang/ml-mobileclip/checkpoints/mobileclip_s2.pt"
-    # )
 
     model, _, transform = open_clip.create_model_and_transforms('ViT-B-16', pretrained='datacomp_xl_s13b_b90k')
-    # # # model, _, transform = open_clip.create_model_and_transforms('ViT-B-32-quickgelu', pretrained='metaclip_400m') 
     model.eval()
     model = prune_model(model, transform, int(text_layer), int(text_embedding_dim), int(text_ffn_dim), int(text_head_num), int(vision_layer), int(vision_embedding_dim), int(vision_ffn_dim), int(vision_head_num))
     if load_checkpoint != None:
@@ -268,6 +253,7 @@ def create_webdataset(
 
 
 if __name__ == "__main__":
+    # prunes and evaluates the pruned model directly.
     parser = argparse.ArgumentParser(description="Webdataset evaluation script.")
     parser = parse_args(parser)
     args = parser.parse_args()
@@ -283,6 +269,8 @@ if __name__ == "__main__":
 
     print(f"MSCOCO Eval Metrics: {metric_retrieval}")
 
+
+# finetune on the mscoco dataset and evaluate the model on mscoco
 def train_and_eval(model_config):
 
     text_layer = model_config["num_hidden_layers"] 
@@ -296,12 +284,14 @@ def train_and_eval(model_config):
 
     checkpoint_name = f"model_eval_{text_layer}_{text_embedding_dim}_{text_ffn_dim}_{text_head_num}_{vision_layer}_{vision_embedding_dim}_{vision_ffn_dim}_{vision_head_num}"
     home_dir = os.getcwd()
+    dataset_location = f"{home_dir}/dataset/train2014.csv"
 
+    # check if model config already trained befores
     checkpoint_path = f"{home_dir}/logs/{checkpoint_name}/checkpoints/epoch_1.pt"
     if os.path.exists(checkpoint_path):
         print("checkpoint already exists!")
     else:
-        command = f"torchrun --nproc_per_node=8 {home_dir}/open_clip_custom/src/open_clip_train/main.py --dataset-type='csv' --train-data=/private/home/irenewang/HWNAS/dataset/train2014.csv \
+        command = f"torchrun --nproc_per_node=8 {home_dir}/open_clip_custom/src/open_clip_train/main.py --dataset-type='csv' --train-data={dataset_location} \
         --batch-size 64     --lr 1e-5     --wd 0.1     --epochs=1    --workers=32      --model=ViT-B-16   --pretrained=datacomp_xl_s13b_b90k \
         --text-layers {text_layer} --text-embed-dim {text_embedding_dim} --text-ffn-dim {text_ffn_dim} --text-head-num {text_head_num} \
         --vision-layers {vision_layer} --vision-embed-dim {vision_embedding_dim} --vision-ffn-dim {vision_ffn_dim} --vision-head-num {vision_head_num} --name {checkpoint_name} --scale-flops"
@@ -347,7 +337,8 @@ def train_and_eval(model_config):
     
     return metric_retrieval, model_size
 
-
+# Helper function on evaluating a model against the MSCOCO dataset
+# checkpoint loads a trained checkpoint of the model, if not specified will evaluate the directly pruned model.
 def eval_only(model_config, checkpoint=None):
 
     text_layer = model_config["num_hidden_layers"] 
@@ -358,7 +349,6 @@ def eval_only(model_config, checkpoint=None):
     vision_ffn_dim = model_config["vision_intermediate_size"] 
     vision_embedding_dim = model_config["vision_hidden_size"]
     vision_head_num = model_config["vision_num_attn_heads"]
-
 
     # Eval model 
     model, transform, model_size = create_model(
@@ -388,7 +378,8 @@ def eval_only(model_config, checkpoint=None):
     return metric_retrieval, metric_zsc, model_size
 
 
-
+# Helper function on evaluating a model against the imagenet1K
+# checkpoint loads a trained checkpoint of the model, if not specified will evaluate the directly pruned model.
 def eval_imagenet(model_config, checkpoint=None):
 
     text_layer = model_config["num_hidden_layers"] 

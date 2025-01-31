@@ -19,7 +19,7 @@ debug = False
 avg_carbon_intensity = 0
 
 # emaps key for the API
-my_key = "807xZNAq5w6DFBMegNqLEvl9"
+my_key = "" # add your electricity maps API
 headers = {"auth-token": my_key}
 
 EMAPS_regions = [
@@ -95,7 +95,7 @@ def query_emaps_zone(zone, start_date, end_date):
     date_end = pd.to_datetime(end_date)
     all_data = pd.DataFrame(columns=["ElectricityMaps Zone", "AER", "UTC_Timestamp"])
 
-    # Emaps only allows data up to 10 days
+    # Emaps only allows data up to 10 days, so we quercy and average for an entire year
     max_days = 10
     while date < date_end:
         date_next = date + datetime.timedelta(max_days)

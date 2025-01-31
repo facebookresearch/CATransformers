@@ -50,7 +50,7 @@ def initialize_accelerator():
     curr_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)))
     import time
 
-    tmp_dir = os.path.join(os.path.dirname(curr_dir), "tmp_" + str(time.time()))
+    tmp_dir = os.path.join(os.path.dirname(curr_dir), "tmp")
 
     gemm_dir = os.path.join(tmp_dir, "GEMM")
     vc_dir = os.path.join(tmp_dir, "vector_core")
@@ -118,17 +118,8 @@ def create_core_config_for_estimation(core_config, ):
     curr_config_factor = max(
         core_config.width, core_config.depth) * max(dim1, dim2)
 
-    # if (core_config.num == 1):
-    #     GLB_BW = min(max(max_glb_bw * curr_config_factor /
-    #                      buffer_scale_metric, 4), max_glb_bw)
-    # else:
-    #     GLB_BW = max_glb_bw
     GLB_BW = max_glb_bw
 
-    # L2_Buffer = (2**(log2(core_config.width) +
-    #              log2(core_config.depth) - 6)) * 1024 *2
-    # if (L2_Buffer < 1024*1024):
-    #     L2_Buffer = 1024*1024
     L2_Buffer = core_config.L2_Buffer
 
     min_L2_Buffer = (2**(log2(core_config.width) +
@@ -137,9 +128,13 @@ def create_core_config_for_estimation(core_config, ):
     if (L2_Buffer < min_L2_Buffer):
         L2_Buffer = min_L2_Buffer
     
-    # TODO: fix this corner case
+    # corner case
     if (core_config.width==256 and core_config.depth==32):
-        L2_Buffer = 256*1024
+        if (L2_Buffer <256*1024):
+            L2_Buffer = 256*1024
+    if (core_config.width==256 and core_config.depth==16):
+        if (L2_Buffer <128*1024):
+            L2_Buffer = 128*1024
 
     acc_config = {
         # Compute Unit configuration
