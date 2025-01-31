@@ -8,3 +8,4 @@ phaze/Estimator/tmp
 phaze/Estimator/estimates/*
 phaze/Solver/out/*
 phaze/GraphExtractor/out/*
+eval/mope/*
