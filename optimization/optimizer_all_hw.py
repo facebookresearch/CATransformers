@@ -8,7 +8,7 @@ from ax.service.utils.report_utils import exp_to_df
 
 from eval import model_eval, model_constants
 from phaze import main
-from configurations import TEXT_MODEL_PARAMS, VISION_MODEL_PARAMS, HW_PARAMS, NUM_TRIALS, AREA_CONSTRAINT, AREA_CONSTRAINT_VALUE, MAX_TOPS, MAX_TOPS_CONSTRAINT, FREQUENCY
+from configurations import TEXT_MODEL_PARAMS, VISION_MODEL_PARAMS, HW_PARAMS, NUM_TRIALS, AREA_CONSTRAINT, AREA_CONSTRAINT_VALUE, MAX_TOPS, MAX_TOPS_CONSTRAINT, FREQUENCY,MODEL_ARCH
 import csv, os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -17,7 +17,8 @@ def model_accuracy(model_param) -> float:
         accuracy_ret, size = model_eval.train_and_eval(model_param)
         return float(accuracy_ret['mean_recall@1']), size
 
-def model_carbon(hw_param, pretrained) -> float:
+def model_carbon(hw_param) -> float:
+        hf_pretrained = model_constants.orig_models[MODEL_ARCH]["hf-model"]
         model = ["CLIP"]
         phaze_seq_len = 77
         force_reextract_model = False
@@ -25,7 +26,7 @@ def model_carbon(hw_param, pretrained) -> float:
         hbm_size = 1
 
         # model, phaze_seq_len, force_reextract_model, hbm_size, hw_param, model_param
-        carbon, latency, area, energy = main.estimate_carbon(model, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, hw_param, None, pretrained)
+        carbon, latency, area, energy = main.estimate_carbon(model, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, hw_param, None, hf_pretrained)
         return carbon, latency, area, energy
 
 def calc_tops(hw_param) -> float:
@@ -54,7 +55,7 @@ def evaluate(trial, parameters, csv_file_name, pretrained):
 
     return {"carbon": (carbon, 0.0), "area": (area, 0.0), "latency": (latency,0.0), "energy": (energy, 0.0), "tops": (tops, 0.0)}
 
-def optimize(run_name, pretrained):
+def optimize(run_name):
     home_dir = os.getcwd()
     directory = f"{home_dir}/results/{run_name}"
     if not os.path.exists(directory):
@@ -132,7 +133,7 @@ def optimize(run_name, pretrained):
         try:
             parameters, trial_index = ax_client.get_next_trial()
             # Local evaluation here can be replaced with deployment to external system.
-            ax_client.complete_trial(trial_index=trial_index, raw_data=evaluate(i,parameters, csv_file_name, pretrained))
+            ax_client.complete_trial(trial_index=trial_index, raw_data=evaluate(i,parameters, csv_file_name))
         except GenerationStrategyRepeatedPoints as e:
             ax_client.save_to_json_file(filepath=f'{directory}/{run_name}.json')
             df = exp_to_df(ax_client.experiment)

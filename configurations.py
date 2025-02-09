@@ -7,6 +7,10 @@ TECHNOLOGY=22
 # Search params
 NUM_TRIALS = 100
 
+# Model Architecture
+MODEL_ARCH= 'ViT-B-16'
+PRETRAINED='datacomp_xl_s13b_b90k' # "Model checkpoint name to use from OpenCLIP"
+
 # TEXT encoder
 TEXT_MODEL_PARAMS = {
 'MAX_LAYERS':12,

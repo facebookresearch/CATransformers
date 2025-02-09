@@ -126,14 +126,19 @@ def get_parser_args():
         default=1,
         help="percent of num hidden attn vision",
     )
-
-
     parser_eval.add_argument(
         "--load-checkpoint",
         type=str,
         required=False,
         default="",
         help="percent of num hidden attn vision",
+    )
+    parser_eval.add_argument(
+        "--save-model-name",
+        type=str,
+        required=False,
+        default="",
+        help="name of the model, used for saving the results",
     )
 
 
@@ -301,7 +306,7 @@ def run(args):
     pretrained_slug_full_path = args.pretrained.replace('/', '_') if os.path.isfile(args.pretrained) else args.pretrained
     dataset_slug = dataset_name.replace('/', '_')
     output = args.output.format(
-        model=args.model, 
+        model=args.save_model_name, 
         pretrained=pretrained_slug,
         pretrained_full_path=pretrained_slug_full_path,
         task=task, 
@@ -325,9 +330,9 @@ def run(args):
         #     cache_dir=args.model_cache_dir,
         #     device=args.device
         # )
-        model_arch="ViT-B-16"
+        model_arch=args.model,
         tokenizer = open_clip.get_tokenizer(model_arch) 
-        model, _, transform = open_clip.create_model_and_transforms('ViT-B-16', pretrained='datacomp_xl_s13b_b90k', device=args.device)
+        model, _, transform = open_clip.create_model_and_transforms(model_arch, pretrained=args.pretrained, device=args.device)
 
         # # Eval model 
         model, transform, model_size = model_eval.create_model(
@@ -335,8 +340,6 @@ def run(args):
         vision_layer=args.vision_layers, vision_embedding_dim=args.vision_embed_dim, vision_ffn_dim=args.vision_ffn_dim, vision_head_num=args.vision_head_num, load_checkpoint=args.load_checkpoint
         )
 
-
-        
         model.eval()
         if args.model.count("nllb-clip") > 0:
             # for NLLB-CLIP models, we need to set the language prior to running the tests
@@ -485,7 +488,7 @@ def run(args):
         raise ValueError("Unsupported task: {}. task should be `zeroshot_classification`, `zeroshot_retrieval`, `linear_probe`, or `captioning`".format(task))
     dump = {
         "dataset": args.dataset,
-        "model": args.model,
+        "model": args.save_model_name,
         "pretrained": args.pretrained,
         "task": task,
         "metrics": metrics,

@@ -40,9 +40,21 @@ class RetrievalDataset(torch.utils.data.Dataset):
             self._dataset[index]["caption"],
         )
 
-
-
 def parse_args(parser):
+    parser.add_argument(
+        "--model-arch",
+        type=str,
+        required=False,
+        default='ViT-B-16',
+        help="base model architecture",
+    )
+    parser.add_argument(
+        "--pretrained",
+        type=str,
+        required=False,
+        default='datacomp_xl_s13b_b90k',
+        help="base pretrained model",
+    )
     parser.add_argument(
         "--text-layers",
         type=float,
@@ -176,11 +188,11 @@ def eval_retreival(task,
     )
     return metrics
 
-def create_model(text_layer, text_embedding_dim, text_ffn_dim, text_head_num, vision_layer, vision_embedding_dim, vision_ffn_dim, vision_head_num, load_checkpoint=None):
+def create_model(model_arch, pretrained, text_layer, text_embedding_dim, text_ffn_dim, text_head_num, vision_layer, vision_embedding_dim, vision_ffn_dim, vision_head_num, load_checkpoint=None):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(0)
 
-    model, _, transform = open_clip.create_model_and_transforms('ViT-B-16', pretrained='datacomp_xl_s13b_b90k')
+    model, _, transform = open_clip.create_model_and_transforms(model_arch, pretrained=pretrained)
     model.eval()
     model = prune_model(model, transform, int(text_layer), int(text_embedding_dim), int(text_ffn_dim), int(text_head_num), int(vision_layer), int(vision_embedding_dim), int(vision_ffn_dim), int(vision_head_num))
     if load_checkpoint != None:
@@ -262,16 +274,16 @@ if __name__ == "__main__":
     if args.load_checkpoint:
         checkpoint = args.load_checkpoint
 
-    model, transform, model_size = create_model(text_layer=args.text_layers, text_embedding_dim=args.text_embed_dim, text_ffn_dim=args.text_ffn_dim, text_head_num=args.text_head_num,
+    model, transform, model_size = create_model(model_arch=args.model_arch, pretrained=args.pretrained, text_layer=args.text_layers, text_embedding_dim=args.text_embed_dim, text_ffn_dim=args.text_ffn_dim, text_head_num=args.text_head_num,
         vision_layer=args.vision_layers, vision_embedding_dim=args.vision_embed_dim, vision_ffn_dim=args.vision_ffn_dim, vision_head_num=args.vision_head_num, load_checkpoint=checkpoint)
 
-    metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform)
+    metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform, model_arch=args.model_arch, pretrained=args.pretrained)
 
     print(f"MSCOCO Eval Metrics: {metric_retrieval}")
 
 
 # finetune on the mscoco dataset and evaluate the model on mscoco
-def train_and_eval(model_config):
+def train_and_eval(model_config, model_arch, pretrained):
 
     text_layer = model_config["num_hidden_layers"] 
     text_ffn_dim = model_config["intermediate_size"]
@@ -282,7 +294,7 @@ def train_and_eval(model_config):
     vision_embedding_dim = model_config["vision_hidden_size"]
     vision_head_num = model_config["vision_num_attn_heads"]
 
-    checkpoint_name = f"model_eval_{text_layer}_{text_embedding_dim}_{text_ffn_dim}_{text_head_num}_{vision_layer}_{vision_embedding_dim}_{vision_ffn_dim}_{vision_head_num}"
+    checkpoint_name = f"model_eval_{model_arch}_{pretrained}_{text_layer}_{text_embedding_dim}_{text_ffn_dim}_{text_head_num}_{vision_layer}_{vision_embedding_dim}_{vision_ffn_dim}_{vision_head_num}"
     home_dir = os.getcwd()
     dataset_location = f"{home_dir}/dataset/train2014.csv"
 
@@ -292,7 +304,7 @@ def train_and_eval(model_config):
         print("checkpoint already exists!")
     else:
         command = f"torchrun --nproc_per_node=8 {home_dir}/open_clip_custom/src/open_clip_train/main.py --dataset-type='csv' --train-data={dataset_location} \
-        --batch-size 64     --lr 1e-5     --wd 0.1     --epochs=1    --workers=32      --model=ViT-B-16   --pretrained=datacomp_xl_s13b_b90k \
+        --batch-size 64     --lr 1e-5     --wd 0.1     --epochs=1    --workers=32      --model={model_arch}   --pretrained={pretrained} \
         --text-layers {text_layer} --text-embed-dim {text_embedding_dim} --text-ffn-dim {text_ffn_dim} --text-head-num {text_head_num} \
         --vision-layers {vision_layer} --vision-embed-dim {vision_embedding_dim} --vision-ffn-dim {vision_ffn_dim} --vision-head-num {vision_head_num} --name {checkpoint_name} --scale-flops"
         # Specify the working directory
@@ -300,7 +312,7 @@ def train_and_eval(model_config):
         # Run the command using subprocess
         subprocess.run(command, shell=True, cwd=working_directory)
     
-    orig_model_configs = orig_models['ViT-B-16']
+    orig_model_configs = orig_models[model_arch]
     orig_model_flops = calculate_flop(orig_model_configs["text_layer"],orig_model_configs["text_embedding_dim"], orig_model_configs["text_ffn_dim"], orig_model_configs["text_head_num"],
                                         orig_model_configs["vision_layer"], orig_model_configs["vision_embedding_dim"], orig_model_configs["vision_ffn_dim"], orig_model_configs["vision_head_num"])
 
@@ -314,7 +326,7 @@ def train_and_eval(model_config):
         total_epochs = MAX_EPOCH
 
     # Eval model 
-    model, transform, model_size = create_model(
+    model, transform, model_size = create_model(model_arch=model_arch,pretrained=pretrained,
         text_layer=text_layer, text_embedding_dim=text_embedding_dim, text_ffn_dim=text_ffn_dim, text_head_num=text_head_num,
         vision_layer=vision_layer, vision_embedding_dim=vision_embedding_dim, vision_ffn_dim=vision_ffn_dim, vision_head_num=vision_head_num, load_checkpoint=f"{home_dir}/logs/{checkpoint_name}/checkpoints/epoch_{total_epochs}.pt"
     )
@@ -323,7 +335,7 @@ def train_and_eval(model_config):
     retry_delay = 60  # seconds
     for attempt in range(max_retries):
         try:
-            metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform)
+            metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform, model_arch=model_arch, pretrained=pretrained)
             break
         except Exception as e:
             print(f"Attempt at evaluation {attempt+1}/{max_retries} failed: {e}")
@@ -339,7 +351,7 @@ def train_and_eval(model_config):
 
 # Helper function on evaluating a model against the MSCOCO dataset
 # checkpoint loads a trained checkpoint of the model, if not specified will evaluate the directly pruned model.
-def eval_only(model_config, checkpoint=None):
+def eval_only(model_config, checkpoint=None, model_arch='ViT-B-16', pretrained='datacomp_xl_s13b_b90k'):
 
     text_layer = model_config["num_hidden_layers"] 
     text_ffn_dim = model_config["intermediate_size"]
@@ -351,7 +363,7 @@ def eval_only(model_config, checkpoint=None):
     vision_head_num = model_config["vision_num_attn_heads"]
 
     # Eval model 
-    model, transform, model_size = create_model(
+    model, transform, model_size = create_model(model_arch=model_arch,pretrained=pretrained,
         text_layer=text_layer, text_embedding_dim=text_embedding_dim, text_ffn_dim=text_ffn_dim, text_head_num=text_head_num,
         vision_layer=vision_layer, vision_embedding_dim=vision_embedding_dim, vision_ffn_dim=vision_ffn_dim, vision_head_num=vision_head_num,
         load_checkpoint=checkpoint
@@ -360,7 +372,7 @@ def eval_only(model_config, checkpoint=None):
     retry_delay = 60  # seconds
     for attempt in range(max_retries):
         try:
-            metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform)
+            metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform, model_arch=model_arch)
             break
         except Exception as e:
             print(f"Attempt at evaluation {attempt+1}/{max_retries} failed: {e}")
@@ -380,7 +392,7 @@ def eval_only(model_config, checkpoint=None):
 
 # Helper function on evaluating a model against the imagenet1K
 # checkpoint loads a trained checkpoint of the model, if not specified will evaluate the directly pruned model.
-def eval_imagenet(model_config, checkpoint=None):
+def eval_imagenet(model_config, checkpoint=None, model_arch='ViT-B-16', pretrained='datacomp_xl_s13b_b90k'):
 
     text_layer = model_config["num_hidden_layers"] 
     text_ffn_dim = model_config["intermediate_size"]
@@ -392,7 +404,7 @@ def eval_imagenet(model_config, checkpoint=None):
     vision_head_num = model_config["vision_num_attn_heads"]
 
     # Eval model 
-    model, transform, model_size = create_model(
+    model, transform, model_size = create_model(model_arch=model_arch,pretrained=pretrained,
         text_layer=text_layer, text_embedding_dim=text_embedding_dim, text_ffn_dim=text_ffn_dim, text_head_num=text_head_num,
         vision_layer=vision_layer, vision_embedding_dim=vision_embedding_dim, vision_ffn_dim=vision_ffn_dim, vision_head_num=vision_head_num,
         load_checkpoint=checkpoint

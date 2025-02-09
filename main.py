@@ -14,7 +14,6 @@ def get_parser_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, default="experiment", help="Name of the experiment, results will be save under this name")
     parser.add_argument('--metric', type=str, default="carbon", help="Metric for optimization Accuracy + [carbon, latency, all, energy], or HW only optimzations")
-    parser.add_argument('--pretrained', type=str, default=None, help="pretrained model architecture, used for HW only optimizations")
     args = parser.parse_args()
     return parser, args
 
@@ -57,13 +56,7 @@ def optimize_energy(base):
     optimizer_energy.optimize(base.name)
 
 def optimize_all_hw(base):
-    optimizer_all_hw.optimize(base.name, base.pretrained)
-
-# def post_pruning_training():
-#     return None
-
-# def evaulate_model():
-#     return None
+    optimizer_all_hw.optimize(base.name)
 
 if __name__ == "__main__":
     sys.exit(main())  # pragma: no cover

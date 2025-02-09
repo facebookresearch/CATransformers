@@ -5,7 +5,7 @@ only needs to be ran one for each model architecture
 
 from pruning import trim_attn_head_idx, trim_ffn_idx
 from model_eval import eval_retreival, eval_zeroShotClassification
-import csv, json
+import csv, json, os
 import torch
 import open_clip_custom
 import copy
@@ -15,31 +15,32 @@ vision_ffn_ranking = []
 text_head_ranking = []
 vision_head_ranking = []
 
-def init_importance(model, transform):
+def init_mope(model_arch='ViT-B-16', pretrained='datacomp_xl_s13b_b90k'):
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(0)
-    model, _, transform = open_clip_custom.create_model_and_transforms('ViT-B-16', pretrained='datacomp_xl_s13b_b90k')
+    model, _, transform = open_clip_custom.create_model_and_transforms(model_arch, pretrained=pretrained)
     model.eval()
     print(model)
     model = model.to(device)
-
+    home_dir = os.getcwd()
+    save_location = f"{home_dir}/eval/mope/{model_arch}_{pretrained}"
 
     # for every layer in text model, evaluate it's importance (12)
-    rank_attn_heads(model, transform, 'text')
-    rank_attn_heads(model, transform, 'vision')
-    rank_ffn_dim(model, transform, 'text')
-    rank_ffn_dim(model, transform, 'vision')
+    rank_attn_heads(model, transform, 'text', save_location)
+    rank_attn_heads(model, transform, 'vision', save_location)
+    rank_ffn_dim(model, transform, 'text', save_location)
+    rank_ffn_dim(model, transform, 'vision', save_location)
 
     return text_ffn_ranking, vision_ffn_ranking, text_head_ranking, vision_head_ranking
 
-def rank_attn_heads(model, transform,  v_or_t="text"):
+def rank_attn_heads(model, transform,  v_or_t="text", save_location="eval/mope"):
     layer_blocks = model.transformer.resblocks if v_or_t == "text" else model.visual.transformer.resblocks
     ranking_list = text_head_ranking if v_or_t == "text" else vision_head_ranking
     importance_scores = []
     num_layer = len(layer_blocks)
 
-    filename = f"ranking_head_{v_or_t}.csv"
+    filename = f"{save_location}/ranking_head_{v_or_t}.csv"
     print(f"saving to {filename}")
     with open(filename, 'a', newline='') as csvfile:
         writer = csv.writer(csvfile)
@@ -72,17 +73,17 @@ def rank_attn_heads(model, transform,  v_or_t="text"):
             # make sure, the full attention head is back for the layer
             m.attn = original_attn
 
-    with open(f"ranking_head_{v_or_t}.json", "w") as f:
+    with open(f"{save_location}/ranking_head_{v_or_t}.json", "w") as f:
     # Write the list to the JSON file
         json.dump(ranking_list, f)
 
-def rank_ffn_dim(model, transform,  v_or_t="text"):
+def rank_ffn_dim(model, transform,  v_or_t="text", save_location="eval/mope"):
     num_blocks = 8 # fix at 12.5 search granularity
     layer_blocks = model.transformer.resblocks if v_or_t == "text" else model.visual.transformer.resblocks
     ranking_list = text_ffn_ranking if v_or_t == "text" else vision_ffn_ranking
     
     importance_scores = []
-    filename = f"ranking_ffn_{v_or_t}.csv"
+    filename = f"{save_location}/ranking_ffn_{v_or_t}.csv"
     print(f"saving to {filename}")
     with open(filename, 'a', newline='') as csvfile:
         writer = csv.writer(csvfile)
@@ -114,7 +115,7 @@ def rank_ffn_dim(model, transform,  v_or_t="text"):
             print(importance_scores)
             # make sure, the full attention head is back for the layer
             m.mlp = original_mlp
-    with open(f"ranking_ffn_{v_or_t}.json", "w") as f:
+    with open(f"{save_location}/ranking_ffn_{v_or_t}.json", "w") as f:
     # Write the list to the JSON file
         json.dump(ranking_list, f)
             
@@ -130,15 +131,16 @@ def evaluate_model(model, transform):
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(0)
-    model, _, transform = open_clip_custom.create_model_and_transforms('ViT-B-16', pretrained='datacomp_xl_s13b_b90k')
+    model_arch='ViT-B-16', pretrained='datacomp_xl_s13b_b90k'
+    model, _, transform = open_clip_custom.create_model_and_transforms(model_arch, pretrained=pretrained)
     model.eval()
     print(model)
     model = model.to(device)
 
-    rank_ffn_dim(model, transform, 'text')
-    rank_attn_heads(model, transform, 'text')
-    rank_attn_heads(model, transform, 'vision')
-    rank_ffn_dim(model, transform, 'vision')
+    rank_ffn_dim(model, transform, 'text', save_location="eval/mope")
+    rank_attn_heads(model, transform, 'text', save_location="eval/mope")
+    rank_attn_heads(model, transform, 'vision', save_location="eval/mope")
+    rank_ffn_dim(model, transform, 'vision', save_location="eval/mope")
 
 
 
