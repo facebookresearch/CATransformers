@@ -21,10 +21,10 @@ export PYTHONPATH=$THIRD_PARTY_PATH:$WHAM_PATH:$SUNSTONE_PATH:$ACT_PATH:$PYTHONP
 ```
 
 ## Prepare Dataset
-We need to prepare the MSCOCO dataset for finetuning the pruned models during optimization. The easiest way is to use a csvdataset, as explained in [OpenCLIP](https://github.com/mlfoundations/open_clip?tab=readme-ov-file#training-coca), and place the dataset in `\dataset`
+We need to prepare the MSCOCO dataset for finetuning the pruned models during optimization. The easiest way is to use a csvdataset, as explained in [OpenCLIP](https://github.com/mlfoundations/open_clip?tab=readme-ov-file#training-coca), and place the dataset in [\dataset](\dataset)
 
 ## Pruning Order
-We prune the CLIP models using importance based techniques from MoPE-CLIP. We provide pre-calculated importance ranking for the ViT-B-16 datacomp model in [eval/mope/ViT-B-16_datacomp_xl_s13b_b90k](eval/mope/ViT-B-16_datacomp_xl_s13b_b90k). To use other models, run:
+We prune the CLIP models using importance based techniques from MoPE-CLIP. We provide pre-calculated importance ranking for the ViT-B-16 datacomp model in [eval/mope/ViT-B-16_datacomp_xl_s13b_b90k](eval/mope/ViT-B-16_datacomp_xl_s13b_b90k). To use other models, modify `MODEL_ARCH` and `PRETRAINED` in [configurations.py](configurations.py), and run:
 
 ```bash
 python eval/init_importance.py
@@ -36,10 +36,10 @@ This only needs to be done once, when running the model for the first time. NOTE
 To get started quickly with running wiht CarbonNAAS, the top-level is found in `main.py`. You can run the optimization using the command:
 
 ```bash
-python main.py --metric=<metric> --name=<Run_name>
+python main.py --metric=<metric> --name=<run_name>
 ```
 
-CarbonNAAS currently supports 4 modes of optimization:
+CarbonNAAS currently supports 4 modes (metric) of optimization:
 1. `carbon`: optimize for Accuracy and total Carbon footprint (with a latency constraint)
 2. `latency`: optimize for Accuracy and Latency
 3. `energy`: optimize for Accuracy and Energy (operational carbon) (with a latency constraint)
@@ -48,13 +48,13 @@ CarbonNAAS currently supports 4 modes of optimization:
 
 ## Changing Search Configurations
 
-The optimization search configurations (HW and model search space and search constraints) are defined in `configurations.py`. To modify the search space, change the definitions in this file. Main Configurations to tune include:
+The optimization search configurations (HW and model search space and search constraints) are defined in [configurations.py](configurations.py). To modify the search space, change the definitions in this file. Main Configurations to tune include:
 * `MODEL_ARCH`: model architecture name (same as used in in OpenCLIP). 
     * For models only on HuggingFace (used for HW-only optimizations, such as TinyCLIP), use the pretrained name on HuggingFace.
 * `PRETRAINED`: checkpoint of the model on OpenCLIP
+* `TRIALS`: Number of trials to run the optimization for 
 *  Contraints: latency, TOPS, and area constraints
 * HW and Model Search space
-* `TRIALS`: Number of trials to run the optimization for 
 
 ## Training CarbonNAAS models
 We leverage our modified OpenCLIP library to train the final CarbonNAAS models via SLURM. We provide an example training script in [final_model_training/train_slurm.sh](final_model_training/train_slurm.sh).
@@ -81,7 +81,7 @@ Where:
 
 ## Adding More Models
 
-Current models that are supported for CarbonNAAS co-optimizations include `ViT-B-16` and `ViT-B-32` base models. To add more models architectures, the model architecture must be support on both HuggingFace Transformers and OpenCLIP. To add the model architecture, simply add to `orig_models` in `eval/model_constants.py`. Such as: 
+Current models that are supported for CarbonNAAS co-optimizations include `ViT-B-16` and `ViT-B-32` base models. To add more model architectures, the model architecture must be available in HuggingFace Transformers and OpenCLIP. To add the model architecture, simply add to `orig_models` in [eval/model_constants.py](eval/model_constants.py). Such as: 
 
 ```bash
 # Model information, including pretrained architecture on HuggingFace Transformers 
@@ -91,9 +91,6 @@ vit_b_32 = {"hf-model":"openai/clip-vit-base-patch32", "text_layer": 12, "text_e
 # Supported models: Key is openCLIP model architecture name
 orig_models ={"ViT-B-16": vit_b_16, "ViT-B-32": vit_b_32}
 ```
-
-
-
 
 ## Repository Structure
 ```bash
