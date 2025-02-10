@@ -5,9 +5,9 @@ CarbonNAAS is a carbon-aware architecture search framework that enables sustaina
 To install the dependencies for CarbonNAAS, create a conda environment and run the setup script:
 
 ```bash
-conda env create -f environment.yml`
-conda activate env`
-./setup.sh`
+conda env create -f env.yaml
+conda activate env
+./setup.sh
 ```
 
 Add the following path variables in `~/.bashrc`:
@@ -22,6 +22,15 @@ export PYTHONPATH=$THIRD_PARTY_PATH:$WHAM_PATH:$SUNSTONE_PATH:$ACT_PATH:$PYTHONP
 
 ## Prepare Dataset
 We need to prepare the MSCOCO dataset for finetuning the pruned models during optimization. The easiest way is to use a csvdataset, as explained in [OpenCLIP](https://github.com/mlfoundations/open_clip?tab=readme-ov-file#training-coca), and place the dataset in `\dataset`
+
+## Pruning Order
+We prune the CLIP models using importance based techniques from MoPE-CLIP. We provide pre-calculated importance ranking for the ViT-B-16 datacomp model in [eval/mope/ViT-B-16_datacomp_xl_s13b_b90k](eval/mope/ViT-B-16_datacomp_xl_s13b_b90k). To use other models, run:
+
+```bash
+python eval/init_importance.py
+```
+This only needs to be done once, when running the model for the first time. NOTE: this may take up to a few hours to run.
+
 
 ## Quick start
 To get started quickly with running wiht CarbonNAAS, the top-level is found in `main.py`. You can run the optimization using the command:
@@ -56,7 +65,11 @@ We leverage our modified OpenCLIP library to train the final CarbonNAAS models v
 We provide scripts to evaluate the model pruned with CarbonNAAS using CLIP Benchmark. [final_model_training/benchmark_cli.py](final_model_training/benchmark_cli.py )
 
 ```bash
-python final_model_training/benchmark_cli.py eval --model <model_arch> --pretrained 'datacomp_xl_s13b_b90k' --dataset "webdatasets.txt"  --dataset_root "https://huggingface.co/datasets/clip-benchmark/wds_{dataset_cleaned}/tree/main" --output "benchmark_{dataset}_{pretrained}_{save-model-name}_{language}_{task}.json" --text-layers <> --text-embed-dim <> --text-ffn-dim <> --text-head-num <>  --vision-layers <>  --vision-embed-dim <> --vision-ffn-dim <> --vision-head-num <> --load-checkpoint <model_checkpoint> --save-model-name <model_name>
+python final_model_training/benchmark_cli.py eval --model <model_arch> --pretrained 'datacomp_xl_s13b_b90k' --dataset "webdatasets.txt"  --dataset_root "https://huggingface.co/datasets/clip-benchmark/wds_{dataset_cleaned}/tree/main" --output "final_model_training/eval_results/benchmark_{dataset}_{pretrained}_{save-model-name}_{language}_{task}.json" --text-layers <> --text-embed-dim <> --text-ffn-dim <> --text-head-num <>  --vision-layers <>  --vision-embed-dim <> --vision-ffn-dim <> --vision-head-num <> --load-checkpoint <model_checkpoint> --save-model-name <model_name>
+
+## To compile the results
+cd final_model_training/eval_results
+clip_benchmark build benchmark_*.json --output benchmark.csv
 ```
 
 Where: 

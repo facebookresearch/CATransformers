@@ -5,9 +5,10 @@ only needs to be ran one for each model architecture
 
 from pruning import trim_attn_head_idx, trim_ffn_idx
 from model_eval import eval_retreival, eval_zeroShotClassification
+from configurations import MODEL_ARCH, PRETRAINED
 import csv, json, os
 import torch
-import open_clip_custom
+import open_clip
 import copy
 
 text_ffn_ranking = []
@@ -19,7 +20,7 @@ def init_mope(model_arch='ViT-B-16', pretrained='datacomp_xl_s13b_b90k'):
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(0)
-    model, _, transform = open_clip_custom.create_model_and_transforms(model_arch, pretrained=pretrained)
+    model, _, transform = open_clip.create_model_and_transforms(model_arch, pretrained=pretrained)
     model.eval()
     print(model)
     model = model.to(device)
@@ -50,14 +51,10 @@ def rank_attn_heads(model, transform,  v_or_t="text", save_location="eval/mope")
             writer.writerow(['Text or Vision', 'Layer Number', 'Head Index Number', 'Mean_accuracy', 'mean_recall@1', 'text_retrieval_recall@1', 'image_retrieval_recall@1', 'ImageNet Acc1'])
         
         for i, m in enumerate(layer_blocks):
-            if i < 11:
-                continue
             num_attn_heads = m.attn.num_heads
             original_attn = m.attn
             importance_scores = []
             for head_idx in range(num_attn_heads):
-                if head_idx < 10:
-                    continue
                 m.attn = trim_attn_head_idx(copy.deepcopy(original_attn), head_idx)
                 # evaluate the pruned model 
                 accuracy_retreival,  accuracy_zeroShot = evaluate_model(model, transform)
@@ -94,13 +91,9 @@ def rank_ffn_dim(model, transform,  v_or_t="text", save_location="eval/mope"):
             writer.writerow(['Text or Vision', 'Layer Number', 'Block Index Number', 'Mean_accuracy', 'mean_recall@1', 'text_retrieval_recall@1', 'image_retrieval_recall@1', 'ImageNet Acc1'])
         
         for i, m in enumerate(layer_blocks):
-            if i != 7:
-                continue
             original_mlp = m.mlp
             importance_scores = []
             for ffn_idx in range(num_blocks):
-                if ffn_idx < 5:
-                    continue
                 m.mlp = trim_ffn_idx(copy.deepcopy(original_mlp), ffn_idx, block_num=num_blocks)
                 # evaluate the pruned model 
                 accuracy_retreival,  accuracy_zeroShot = evaluate_model(model, transform)
@@ -131,16 +124,21 @@ def evaluate_model(model, transform):
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(0)
-    model_arch='ViT-B-16', pretrained='datacomp_xl_s13b_b90k'
-    model, _, transform = open_clip_custom.create_model_and_transforms(model_arch, pretrained=pretrained)
+    model_arch=MODEL_ARCH
+    pretrained=PRETRAINED
+    model, _, transform = open_clip.create_model_and_transforms(model_arch, pretrained=pretrained)
     model.eval()
     print(model)
     model = model.to(device)
+    home_dir = os.getcwd()
+    save_location = f"{home_dir}/eval/mope/{model_arch}_{pretrained}"
+    if not os.path.exists(save_location):
+        os.makedirs(save_location)
 
-    rank_ffn_dim(model, transform, 'text', save_location="eval/mope")
-    rank_attn_heads(model, transform, 'text', save_location="eval/mope")
-    rank_attn_heads(model, transform, 'vision', save_location="eval/mope")
-    rank_ffn_dim(model, transform, 'vision', save_location="eval/mope")
+    rank_ffn_dim(model, transform, 'text', save_location=save_location)
+    rank_attn_heads(model, transform, 'text', save_location=save_location)
+    rank_attn_heads(model, transform, 'vision', save_location=save_location)
+    rank_ffn_dim(model, transform, 'vision', save_location=save_location)
 
 
 

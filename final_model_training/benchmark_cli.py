@@ -8,6 +8,7 @@ import random
 import sys
 from copy import copy
 from itertools import product
+from pathlib import Path
 
 import torch
 from eval import model_eval
@@ -330,12 +331,12 @@ def run(args):
         #     cache_dir=args.model_cache_dir,
         #     device=args.device
         # )
-        model_arch=args.model,
+        model_arch=args.model
         tokenizer = open_clip.get_tokenizer(model_arch) 
         model, _, transform = open_clip.create_model_and_transforms(model_arch, pretrained=args.pretrained, device=args.device)
 
         # # Eval model 
-        model, transform, model_size = model_eval.create_model(
+        model, transform, model_size = model_eval.create_model(model_arch, pretrained=args.pretrained,
         text_layer=args.text_layers, text_embedding_dim=args.text_embed_dim, text_ffn_dim=args.text_ffn_dim, text_head_num=args.text_head_num,
         vision_layer=args.vision_layers, vision_embedding_dim=args.vision_embed_dim, vision_ffn_dim=args.vision_ffn_dim, vision_head_num=args.vision_head_num, load_checkpoint=args.load_checkpoint
         )

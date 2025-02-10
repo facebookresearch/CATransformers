@@ -17,7 +17,6 @@ import json
 import sys
 
 from eval.multiheaded_attention_custom import MultiheadAttentionSuper
-from init_importance import init_mope
 
 text_ffn_ranking = []
 vision_ffn_ranking = [] 
@@ -41,7 +40,6 @@ def prune_model(model, transform, model_arch, pretrained, text_layer, text_embed
     
 
     try:
-        print(f"Loading MoPE-CLIP importance files")
         with open(text_ffn_path, "r") as f:
         # Load the JSON data from the file
             text_ffn_ranking = json.load(f)
@@ -56,22 +54,8 @@ def prune_model(model, transform, model_arch, pretrained, text_layer, text_embed
             vision_head_ranking = json.load(f)
     except:
         print(f"Error: Unable to loadat least one MoPE-CLIP importance files.")
-        print(f"Initializing importance files")
-        init_mope(model_arch=model_arch, pretrained=pretrained)
-        
-        print(f"Loading MoPE-CLIP importance files")
-        with open(text_ffn_path, "r") as f:
-        # Load the JSON data from the file
-            text_ffn_ranking = json.load(f)
-        with open(vision_ffn_path, "r") as f:
-        # Load the JSON data from the file
-            vision_ffn_ranking = json.load(f)
-        with open(text_head_path, "r") as f:
-        # Load the JSON data from the file
-            text_head_ranking = json.load(f)
-        with open(vision_head_path, "r") as f:
-        # Load the JSON data from the file
-            vision_head_ranking = json.load(f)
+        print(f"Please make sure you have ran \" python eval/init_importance.py\" before pruning.")
+        sys.exit(1)
 
     model.transformer.resblocks = trim_ffn_mope(model.transformer.resblocks, text_ffn_dim, block_num=8, v_or_t='text')
     model.visual.transformer.resblocks = trim_ffn_mope(model.visual.transformer.resblocks, vision_ffn_dim, block_num=8, v_or_t='vision')

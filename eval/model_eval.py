@@ -194,7 +194,7 @@ def create_model(model_arch, pretrained, text_layer, text_embedding_dim, text_ff
 
     model, _, transform = open_clip.create_model_and_transforms(model_arch, pretrained=pretrained)
     model.eval()
-    model = prune_model(model, transform, int(text_layer), int(text_embedding_dim), int(text_ffn_dim), int(text_head_num), int(vision_layer), int(vision_embedding_dim), int(vision_ffn_dim), int(vision_head_num))
+    model = prune_model(model, transform, model_arch, pretrained, int(text_layer), int(text_embedding_dim), int(text_ffn_dim), int(text_head_num), int(vision_layer), int(vision_embedding_dim), int(vision_ffn_dim), int(vision_head_num))
     if load_checkpoint != None:
         print("loading model from checkpoint: " + load_checkpoint)
         open_clip.load_checkpoint(model, load_checkpoint)
@@ -277,7 +277,7 @@ if __name__ == "__main__":
     model, transform, model_size = create_model(model_arch=args.model_arch, pretrained=args.pretrained, text_layer=args.text_layers, text_embedding_dim=args.text_embed_dim, text_ffn_dim=args.text_ffn_dim, text_head_num=args.text_head_num,
         vision_layer=args.vision_layers, vision_embedding_dim=args.vision_embed_dim, vision_ffn_dim=args.vision_ffn_dim, vision_head_num=args.vision_head_num, load_checkpoint=checkpoint)
 
-    metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform, model_arch=args.model_arch, pretrained=args.pretrained)
+    metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform, model_arch=args.model_arch)
 
     print(f"MSCOCO Eval Metrics: {metric_retrieval}")
 
@@ -335,7 +335,7 @@ def train_and_eval(model_config, model_arch, pretrained):
     retry_delay = 60  # seconds
     for attempt in range(max_retries):
         try:
-            metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform, model_arch=model_arch, pretrained=pretrained)
+            metric_retrieval = eval_retreival(task='mscoco_captions', model=model, transform=transform, model_arch=model_arch)
             break
         except Exception as e:
             print(f"Attempt at evaluation {attempt+1}/{max_retries} failed: {e}")
@@ -409,7 +409,7 @@ def eval_imagenet(model_config, checkpoint=None, model_arch='ViT-B-16', pretrain
         vision_layer=vision_layer, vision_embedding_dim=vision_embedding_dim, vision_ffn_dim=vision_ffn_dim, vision_head_num=vision_head_num,
         load_checkpoint=checkpoint
     )
-    metric_zsc = eval_zeroShotClassification(task='imagenet1k', model=model, transform=transform)
+    metric_zsc = eval_zeroShotClassification(task='imagenet1k', model=model, transform=transform, model_arch=model_arch)
 
     print(f"ImageNet1k Eval Metrics: {metric_zsc}")
     
