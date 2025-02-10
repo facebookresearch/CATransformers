@@ -21,7 +21,7 @@ export PYTHONPATH=$THIRD_PARTY_PATH:$WHAM_PATH:$SUNSTONE_PATH:$ACT_PATH:$PYTHONP
 ```
 
 ## Prepare Dataset
-We need to prepare the MSCOCO dataset for finetuning the pruned models during optimization. The easiest way is to use a csvdataset, as explained in [OpenCLIP](https://github.com/mlfoundations/open_clip?tab=readme-ov-file#training-coca), and place the dataset in [\dataset](\dataset)
+We need to prepare the MSCOCO dataset for finetuning the pruned models during optimization. The easiest way is to use a csvdataset, as explained in [OpenCLIP](https://github.com/mlfoundations/open_clip?tab=readme-ov-file#training-coca), and place the dataset in [/dataset](/dataset)
 
 ## Pruning Order
 We prune the CLIP models using importance based techniques from MoPE-CLIP. We provide pre-calculated importance ranking for the ViT-B-16 datacomp model in [eval/mope/ViT-B-16_datacomp_xl_s13b_b90k](eval/mope/ViT-B-16_datacomp_xl_s13b_b90k). To use other models, modify `MODEL_ARCH` and `PRETRAINED` in [configurations.py](configurations.py), and run:
