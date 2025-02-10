@@ -258,7 +258,7 @@ def main(args):
     vision_embedding_dim = int(args.vision_embed_dim)
     vision_head_num = int(args.vision_head_num)
 
-    model = prune_model(model, preprocess_train, text_layer, text_embedding_dim, text_ffn_dim, text_head_num, vision_layer, vision_embedding_dim, vision_ffn_dim, vision_head_num, True)
+    model = prune_model(model, preprocess_train, args.model,args.pretrained, text_layer, text_embedding_dim, text_ffn_dim, text_head_num, vision_layer, vision_embedding_dim, vision_ffn_dim, vision_head_num, True)
 
     orig_model_configs = orig_models[args.model]
     orig_model_flops = calculate_flop(orig_model_configs["text_layer"],orig_model_configs["text_embedding_dim"], orig_model_configs["text_ffn_dim"], orig_model_configs["text_head_num"],

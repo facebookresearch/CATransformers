@@ -1,27 +1,29 @@
 
 # Phaze required setup
-# Megatron specific installations
+# Megatron specific installations can be skipped
 ######################################################
 
 pip3 install git+https://github.com/huggingface/Megatron-LM.git
 pip3 install six
 pip3 install pybind11
-pip3 install ninjaexi
+pip3 install ninja
 pip3 install Wandb
 
 pip3 install scipy
 pip3 install networkx
-pip install gurobipy
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 --no-cache-dir
+pip3 install gurobipy
+pip3 install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu121
 pip3 install transformers==4.45.2
 pip3 install graphviz pygraphviz 
 
+
+## not needed for non-megatron models
 # git clone https://github.com/NVIDIA/apex
 # cd apex
-# pip3 install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --global-option="--cpp_ext" --global-option="--cuda_ext" ./
+# # pip3 install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --global-option="--cpp_ext" --global-option="--cuda_ext" ./
+# # cd ..
+# cp -r phaze/third_party_for_phaze/phaze-megatron-lm/megatron/*  ${HOME}/.conda/envs/env/lib/python3.9/site-packages/megatron/
 # cd ..
-cp -r phaze/third_party_for_phaze/phaze-megatron-lm/megatron/*  ${HOME}/.conda/envs/env/lib/python3.9/site-packages/megatron/
-
 ######################################################
 
 git clone https://github.com/Accelergy-Project/accelergy.git
@@ -50,7 +52,7 @@ cd ..
 
 git clone https://github.com/Accelergy-Project/accelergy-library-plug-in.git
 cd accelergy-library-plug-in/
-git checkout   0cab62c3631dbbe9a7925ff795285619a1bd6538
+git checkout cab62c3631dbbe9a7925ff795285619a1bd6538
 pip3 install .
 cd ..
 
@@ -61,14 +63,22 @@ cd phaze
 export THIRD_PARTY_PATH=$(pwd)/third_party_for_phaze
 export WHAM_PATH=$THIRD_PARTY_PATH/wham/
 export SUNSTONE_PATH=$THIRD_PARTY_PATH/sunstone/
-export PYTHONPATH=$THIRD_PARTY_PATH:$WHAM_PATH:$SUNSTONE_PATH:$PYTHONPATH
+export ACT_PATH=$THIRD_PARTY_PATH/ACT/
+export PYTHONPATH=$THIRD_PARTY_PATH:$WHAM_PATH:$SUNSTONE_PATH:$ACT_PATH:$PYTHONPATH
 cd ..
 
-#general carbon nas setup 
-pip install 'open_clip_torch[training]'
+# General carbon nas setup 
+pip3 install 'open_clip_torch[training]==2.24.0'
 pip3 install ax-platform
 pip3 install clip-benchmark
 pip3 install matplotlib
 pip3 install numpy
-pip3 install fairseq
 pip3 install pandas
+
+## workaround for dependencies issues with fairseq
+pip3 install --force pip==24.0
+git clone https://github.com/pytorch/fairseq
+cd fairseq
+pip install --editable .
+cd ..
+pip install --upgrade pip

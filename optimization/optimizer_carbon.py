@@ -8,17 +8,18 @@ from ax.service.utils.report_utils import exp_to_df
 
 from eval import model_eval, model_constants
 from phaze import main
-from configurations import TEXT_MODEL_PARAMS, VISION_MODEL_PARAMS, HW_PARAMS, NUM_TRIALS, AREA_CONSTRAINT, LATENCY_CONSTRAINT, AREA_CONSTRAINT_VALUE, LATENCY_CONSTRAINT_VALUE, MAX_TOPS, MAX_TOPS_CONSTRAINT, FREQUENCY
+from configurations import TEXT_MODEL_PARAMS, VISION_MODEL_PARAMS, HW_PARAMS, NUM_TRIALS, AREA_CONSTRAINT, LATENCY_CONSTRAINT, AREA_CONSTRAINT_VALUE, LATENCY_CONSTRAINT_VALUE, MAX_TOPS, MAX_TOPS_CONSTRAINT, FREQUENCY, MODEL_ARCH, PRETRAINED
 import csv, os
 import pandas as pd
 import matplotlib.pyplot as plt
 
 def model_accuracy(model_param) -> float:
-        accuracy_ret, size = model_eval.train_and_eval(model_param)
+        accuracy_ret, size = model_eval.train_and_eval(model_param, MODEL_ARCH, PRETRAINED)
         return float(accuracy_ret['mean_recall@1']), size
 
 
 def model_carbon(model_param, hw_param) -> float:
+        hf_pretrained = model_constants.orig_models[MODEL_ARCH]["hf-model"]
         model = ["CLIP"]
         phaze_seq_len = 77
         force_reextract_model = False
@@ -26,7 +27,7 @@ def model_carbon(model_param, hw_param) -> float:
         hbm_size = 1
 
         # model, phaze_seq_len, force_reextract_model, hbm_size, hw_param, model_param
-        carbon, latency, area, energy = main.estimate_carbon(model, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, hw_param, model_param, "openai/clip-vit-base-patch32")
+        carbon, latency, area, energy = main.estimate_carbon(model, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, hw_param, model_param, hf_pretrained)
         return carbon, latency, area, energy
 
 def calc_tops(hw_param) -> float:
@@ -47,12 +48,12 @@ def evaluate(trial, parameters, csv_file_name):
     hw_config["L2_BW"] = parameters.get("l2_bw")
     
     num_ffn_blocks = 8
-    text_block_size = model_constants.orig_models["ViT-B-16"]["text_ffn_dim"] / num_ffn_blocks
-    vision_block_size = model_constants.orig_models["ViT-B-16"]["vision_ffn_dim"] / num_ffn_blocks
+    text_block_size = model_constants.orig_models[MODEL_ARCH]["text_ffn_dim"] / num_ffn_blocks
+    vision_block_size = model_constants.orig_models[MODEL_ARCH]["vision_ffn_dim"] / num_ffn_blocks
 
     num_hidden_blocks = 8
-    text_hidden_block_size = model_constants.orig_models["ViT-B-16"]["text_embedding_dim"] / num_hidden_blocks
-    vision_hidden_block_size = model_constants.orig_models["ViT-B-16"]["vision_embedding_dim"] / num_hidden_blocks
+    text_hidden_block_size = model_constants.orig_models[MODEL_ARCH]["text_embedding_dim"] / num_hidden_blocks
+    vision_hidden_block_size = model_constants.orig_models[MODEL_ARCH]["vision_embedding_dim"] / num_hidden_blocks
     
     model_config = {}
     model_config["num_hidden_layers"] = parameters.get("num_hidden_layers")

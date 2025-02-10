@@ -24,7 +24,7 @@ text_head_ranking = []
 vision_head_ranking = []
 
 
-def prune_model(model, transform, text_layer, text_embedding_dim, text_ffn_dim, text_head_num, vision_layer, vision_embedding_dim, vision_ffn_dim, vision_head_num, training=False):
+def prune_model(model, transform, model_arch, pretrained, text_layer, text_embedding_dim, text_ffn_dim, text_head_num, vision_layer, vision_embedding_dim, vision_ffn_dim, vision_head_num, training=False):
 
     global text_ffn_ranking 
     global vision_ffn_ranking
@@ -32,7 +32,7 @@ def prune_model(model, transform, text_layer, text_embedding_dim, text_ffn_dim, 
     global vision_head_ranking
     # Open the JSON file for reading
 
-    mope_dir = os.path.join(Path(__file__).parent.absolute(), "mope/")
+    mope_dir = os.path.join(Path(__file__).parent.absolute(), f"mope/{model_arch}_{pretrained}/")
     text_ffn_path = os.path.join(mope_dir, "ranking_ffn_text.json")
     text_head_path = os.path.join(mope_dir, "ranking_head_text.json")
     vision_ffn_path = os.path.join(mope_dir, "ranking_ffn_vision.json")
@@ -54,7 +54,7 @@ def prune_model(model, transform, text_layer, text_embedding_dim, text_ffn_dim, 
             vision_head_ranking = json.load(f)
     except:
         print(f"Error: Unable to loadat least one MoPE-CLIP importance files.")
-        print(f"Please make sure you have ran \" python init_importance.py\" before pruning.")
+        print(f"Please make sure you have ran \" python eval/init_importance.py\" before pruning.")
         sys.exit(1)
 
     model.transformer.resblocks = trim_ffn_mope(model.transformer.resblocks, text_ffn_dim, block_num=8, v_or_t='text')

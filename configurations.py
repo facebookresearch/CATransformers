@@ -1,11 +1,15 @@
 # HW parameters (PHAZE)
-FREQUENCY= 625 * (1000**2)  # Edge TPU 500MHz
+FREQUENCY= 625 * (1000**2) 
 PRECISION = 8
 TECHNOLOGY=22
 
 
 # Search params
-NUM_TRIALS = 100
+NUM_TRIALS = 2
+
+# Model Architecture
+MODEL_ARCH= 'ViT-B-16'
+PRETRAINED='datacomp_xl_s13b_b90k' # "Model checkpoint name to use from OpenCLIP"
 
 # TEXT encoder
 TEXT_MODEL_PARAMS = {
@@ -42,7 +46,7 @@ HW_PARAMS={
 }
 
 # constraints
-LATENCY_CONSTRAINT = "latency <= 0.05" # seconds (100ms)
+LATENCY_CONSTRAINT = "latency <= 0.05" # seconds (50ms)
 AREA_CONSTRAINT = "area <= 31990347" # um^2
 MAX_TOPS_CONSTRAINT = "tops <= 20.48"
 AREA_CONSTRAINT_VALUE = 31990347

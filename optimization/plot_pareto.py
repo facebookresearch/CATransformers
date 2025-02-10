@@ -202,10 +202,10 @@ def pareto_frontier_hw(save_name, directory):
     tops = MAX_TOPS
 
     df = pd.read_csv(f"{directory}/{save_name}/{save_name}.csv")
-    filtered_df = df[df['area'] <= area_constraint]
+    filtered_df = df[df['Area'] <= area_constraint]
     # Get accuracy, latency, and carbon values
-    latency = filtered_df['latency'].values
-    carbon = filtered_df['carbon'].values
+    latency = filtered_df['Latency'].values
+    carbon = filtered_df['Carbon'].values
     # Compute Pareto frontier
     indices = []
     for i in range(len(latency)):
@@ -223,7 +223,7 @@ def pareto_frontier_hw(save_name, directory):
     plt.cla()
     plt.clf()
     plt.figure(figsize=(10, 8))
-    plt.scatter(frontier_points['carbon'], frontier_points['latency']*1000, s=100, label='Pareto frontier')
+    plt.scatter(frontier_points['Carbon'], frontier_points['Latency']*1000, s=100, label='Pareto frontier')
     plt.xlabel('Carbon (kgCO2e)')
     plt.ylabel('Latency (ms)')
     area_mm = "{:.1f}".format(area_constraint/1000000)
