@@ -12,8 +12,8 @@ from optimization import optimizer_carbon, optimizer_latency, optimizer_all, opt
 from optimization import plot_pareto
 def get_parser_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--name', type=str, default="experiment", help="Name of the experiment, results will be save under this name")
-    parser.add_argument('--metric', type=str, default="carbon", help="Metric for optimization Accuracy + [carbon, latency, all, energy], or HW only optimzations")
+    parser.add_argument('--name', type=str, default="experiment", help="Name of the experiment, results will be saved under this name")
+    parser.add_argument('--metric', type=str, default="carbon", help="Metric for optimization Accuracy + [carbon, latency, all, energy], or HW only optimzations (all-hw)")
     args = parser.parse_args()
     return parser, args
 
