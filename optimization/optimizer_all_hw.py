@@ -33,7 +33,7 @@ def calc_tops(hw_param) -> float:
     return (hw_param["num_tc"] * hw_param["width"] * hw_param["depth"] * 2 * FREQUENCY) / (1000**4)
 
 # Evaluation Function
-def evaluate(trial, parameters, csv_file_name, pretrained):
+def evaluate(trial, parameters, csv_file_name):
 
     hw_config = {}
     hw_config["num_tc"] = parameters.get("cluster_num")
@@ -46,7 +46,7 @@ def evaluate(trial, parameters, csv_file_name, pretrained):
     hw_config["L2_Buffer"] = parameters.get("l2_sram_choices_KB")*1024
     hw_config["L2_BW"] = parameters.get("l2_bw")
 
-    carbon, latency, area, energy = model_carbon(hw_config, pretrained)
+    carbon, latency, area, energy = model_carbon(hw_config)
     tops = calc_tops(hw_config)
 
     with open(csv_file_name, "a", newline="") as csvfile:
