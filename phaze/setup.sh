@@ -15,7 +15,7 @@ pip3 install graphviz pygraphviz
 # Megatron specific installations
 ######################################################
 #pip3 install megatron-lm
-pip3 install git+https://github.com/huggingface/Megatron-LM.git
+# pip3 install git+https://github.com/huggingface/Megatron-LM.git
 pip3 install six
 pip3 install pybind11
 pip3 install ninjaexi
