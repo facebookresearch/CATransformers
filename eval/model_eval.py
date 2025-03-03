@@ -162,7 +162,6 @@ def eval_zeroShotClassification(task,
     }
     return metrics
 
-
 def eval_retreival(task,
     model,
     transform, 
@@ -189,7 +188,7 @@ def eval_retreival(task,
     return metrics
 
 def create_model(model_arch, pretrained, text_layer, text_embedding_dim, text_ffn_dim, text_head_num, vision_layer, vision_embedding_dim, vision_ffn_dim, vision_head_num, load_checkpoint=None):
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(0)
 
     model, _, transform = open_clip.create_model_and_transforms(model_arch, pretrained=pretrained)
@@ -414,6 +413,59 @@ def eval_imagenet(model_config, checkpoint=None, model_arch='ViT-B-16', pretrain
     print(f"ImageNet1k Eval Metrics: {metric_zsc}")
     
     return metric_zsc
+
+def measure_energy(model_config, checkpoint=None, model_arch='ViT-B-16', pretrained='datacomp_xl_s13b_b90k'):
+    text_layer = model_config["num_hidden_layers"] 
+    text_ffn_dim = model_config["intermediate_size"]
+    text_embedding_dim = model_config["hidden_size"] 
+    text_head_num = model_config["num_attn_heads"] 
+    vision_layer = model_config["vision_num_hidden_layers"]
+    vision_ffn_dim = model_config["vision_intermediate_size"] 
+    vision_embedding_dim = model_config["vision_hidden_size"]
+    vision_head_num = model_config["vision_num_attn_heads"]
+
+    # Eval model 
+    model, transform, model_size = create_model(model_arch=model_arch,pretrained=pretrained,
+        text_layer=text_layer, text_embedding_dim=text_embedding_dim, text_ffn_dim=text_ffn_dim, text_head_num=text_head_num,
+        vision_layer=vision_layer, vision_embedding_dim=vision_embedding_dim, vision_ffn_dim=vision_ffn_dim, vision_head_num=vision_head_num,
+        load_checkpoint=checkpoint
+    )
+    tokenizer =  open_clip.get_tokenizer(model_arch)
+    import torch
+    from PIL import Image
+    import requests
+    from zeus.monitor import ZeusMonitor
+
+    url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    # Set the device to the first available GPU
+    # torch.cuda.set_device(0)
+    image = Image.open(requests.get(url, stream=True).raw)
+    image = transform(image).unsqueeze(0)
+    image = image.to(device)
+    text = tokenizer(["a diagram"])
+    text = text.to(device)
+
+    monitor = ZeusMonitor(gpu_indices=[0])
+
+    # Measure total time and energy within the window.
+    monitor.begin_window("inference")
+    for e in range(1000):
+
+        with torch.no_grad(), torch.cuda.amp.autocast():
+            image_features = model.encode_image(image)
+            text_features = model.encode_text(text)
+            image_features /= image_features.norm(dim=-1, keepdim=True)
+            text_features /= text_features.norm(dim=-1, keepdim=True)
+
+            text_probs = (100.0 * image_features @ text_features.T).softmax(dim=-1)
+    measurement = monitor.end_window("inference")
+    print(f"Entire inference: {measurement.time} s, {measurement.total_energy} J")
+    return (measurement.time / 1000, measurement.total_energy / 1000)
+
+
+
+
 
 
 

@@ -177,7 +177,7 @@ def optimize(run_name):
         objectives={
             # `threshold` arguments are optional
             "accuracy": ObjectiveProperties(minimize=False, threshold=0.1),
-            "energy": ObjectiveProperties(minimize=True,threshold=1.0),
+            "energy": ObjectiveProperties(minimize=True,threshold=2.0),
         },
         outcome_constraints=[
             AREA_CONSTRAINT,

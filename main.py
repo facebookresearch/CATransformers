@@ -8,7 +8,7 @@ import random
 import sys
 from copy import copy
 from itertools import product
-from optimization import optimizer_carbon, optimizer_latency, optimizer_all, optimizer_energy, optimizer_all_hw
+from optimization import optimizer_carbon, optimizer_latency, optimizer_all, optimizer_energy, optimizer_all_hw, optimizer_energy_model
 from optimization import plot_pareto
 def get_parser_args():
     parser = argparse.ArgumentParser()
@@ -38,6 +38,9 @@ def main():
     elif args.metric == "all-hw":
         optimize_all_hw(args)
         plot_pareto.pareto_frontier_hw(args.name, directory)
+    elif args.metric == "energy-model":
+        optimize_energy_model(args)
+        plot_pareto.pareto_frontier_energy_model(args.name, directory)
     else:
         print("Error: invalid metric")
         parser.print_help()
@@ -57,6 +60,9 @@ def optimize_energy(base):
 
 def optimize_all_hw(base):
     optimizer_all_hw.optimize(base.name)
+
+def optimize_energy_model(base):
+    optimizer_energy_model.optimize(base.name)
 
 if __name__ == "__main__":
     sys.exit(main())  # pragma: no cover
