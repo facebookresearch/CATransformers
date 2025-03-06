@@ -103,3 +103,8 @@ orig_models ={"ViT-B-16": vit_b_16, "ViT-B-32": vit_b_32}
 |-- final_model_training    : For training pruned models and evaluating with CLIP Benchmark
 |-- phaze                   : Hardware Architecture Estimator
 ```
+
+## LICENSE
+
+The majority of CarbonNAAS is licensed under CC-BY-NC, however portions of the project are available under separate license terms: [Phaze](https://github.com/msr-fiddle/phaze.git) is licensed under the MIT license.
+

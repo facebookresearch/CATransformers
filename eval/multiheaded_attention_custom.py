@@ -1,4 +1,12 @@
 """
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+# 
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+"""
+
+"""
 # This custom multiheaded_attention is edited based on prior work HAT. 
 # We do this so that only the embedding dimension is pruned, but the total QKV dimension remains the same
 # the QKV dimension is fixed for each attention head, and is only pruned, by pruning the number of heads. 

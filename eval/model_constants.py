@@ -1,3 +1,11 @@
+"""
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+# 
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+"""
+
 ATTN_HEAD_DIM = 64
 MAX_EPOCH = 10
 text_context_length = 77

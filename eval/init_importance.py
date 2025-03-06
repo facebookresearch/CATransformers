@@ -1,4 +1,12 @@
 """
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+# 
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+"""
+
+"""
 In this file we initialize the required files to run MoPE-CLIP based pruning for the number of heads and FFN dimension 
 only needs to be ran one for each model architecture
 """
