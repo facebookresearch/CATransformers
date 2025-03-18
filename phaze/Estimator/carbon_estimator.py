@@ -1,3 +1,11 @@
+"""
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+"""
+
 
 from .architecture import create_core_config, get_configs_to_explore
 from .architecture import tc_configs, vc_configs

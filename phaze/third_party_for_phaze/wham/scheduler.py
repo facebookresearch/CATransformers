@@ -1,3 +1,11 @@
+"""
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+"""
+
 from perf_wrappers import tensor_core_wrapper
 from perf_wrappers import vector_core_estimator
 from op_fusion import graph

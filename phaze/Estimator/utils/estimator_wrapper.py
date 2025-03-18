@@ -1,3 +1,11 @@
+"""
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+"""
+
 from .graph_wrapper import construct_external_scheduler, get_engine_type
 from .tc_estimator import tensor_core_estimate
 

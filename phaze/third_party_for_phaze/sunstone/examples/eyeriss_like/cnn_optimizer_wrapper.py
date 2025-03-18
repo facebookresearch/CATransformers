@@ -1,3 +1,11 @@
+"""
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+"""
+
 from src.tiling import GenericTile, GenericProblem
 from src.generic_optimizers import tls_sptl_tmprl, tls_tmprl_alpha_beta_mlt_thrd
 import sys
