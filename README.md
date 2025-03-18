@@ -106,5 +106,5 @@ orig_models ={"ViT-B-16": vit_b_16, "ViT-B-32": vit_b_32}
 
 ## LICENSE
 
-The majority of CarbonNAAS is licensed under CC-BY-NC, however portions of the project are available under separate license terms: [Phaze](https://github.com/msr-fiddle/phaze.git) is licensed under the MIT license.
+The majority of CarbonNAAS is licensed under CC-BY-NC, however portions of the project are available under separate license terms: [Phaze](https://github.com/msr-fiddle/phaze.git) and [OpenCLIP](https://github.com/openai/CLIP) is licensed under the MIT license.
 
