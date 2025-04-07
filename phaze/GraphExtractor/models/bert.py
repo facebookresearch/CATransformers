@@ -41,17 +41,27 @@ class BertIR(BaseModelIR):
         self.trace_only_model = False
 
         if self.model_name == "bertbase":
-            self.model = BertModel.from_pretrained("bert-base-uncased")
+            if(self.model_config!=None):
+                config = BertConfig.from_pretrained("bert-base-uncased", hidden_size=self.model_config['hidden_size'],
+                                                    num_hidden_layers=self.model_config['num_hidden_layers'], 
+                                                    intermediate_size=self.model_config['intermediate_size'],
+                                                    num_attention_heads=self.model_config['num_attn_heads'],
+                                                    attn_implementation="eager")
+                self.model = BertModel(config)
+            else:
+                self.model = BertModel.from_pretrained("bert-base-uncased", attn_implementation="eager")
             self.configuration = self.model.config
             self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
         elif self.model_name == "bertlarge":
             if(self.model_config!=None):
                 config = BertConfig.from_pretrained("bert-large-uncased", hidden_size=self.model_config['hidden_size'],
                                                     num_hidden_layers=self.model_config['num_hidden_layers'], 
-                                                    intermediate_size=self.model_config['intermediate_size'])
+                                                    intermediate_size=self.model_config['intermediate_size'],
+                                                    num_attention_heads=self.model_config['num_attn_heads'],
+                                                    attn_implementation="eager")
                 self.model = BertModel(config)
             else:
-                self.model = BertModel.from_pretrained("bert-large-uncased")
+                self.model = BertModel.from_pretrained("bert-large-uncased", attn_implementation="eager")
 
             self.configuration = self.model.config
             self.tokenizer = BertTokenizer.from_pretrained(
@@ -239,6 +249,6 @@ class BertIR(BaseModelIR):
     def create_graph_from_symbolic_trace(self):
         super().create_graph_from_symbolic_trace()
 
-    def extract_model_graph(self, micro_batch_size=1, sequence_length=64, force_reextract_model=False,):
+    def extract_model_graph(self, micro_batch_size=1, sequence_length=64, force_reextract_model=False,model_config=None):
         self.load_language_model(
-            self.out_dir, micro_batch_size, sequence_length, force_reextract_model)
+            self.out_dir, micro_batch_size, sequence_length, force_reextract_model, model_config=model_config)

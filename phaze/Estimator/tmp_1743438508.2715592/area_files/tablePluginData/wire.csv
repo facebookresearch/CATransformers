@@ -1,0 +1,2 @@
+technology,latency,length,action,energy,area
+45nm,5ns,3,transfer_random|read|write|leak|update,0.2,0

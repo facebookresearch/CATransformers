@@ -1,0 +1,5 @@
+technology,latency,datawidth,num_pipeline_stages,action,energy,area
+45nm,5ns,32,2,mac_random,3.2,3632
+45nm,5ns,32,2,mac_reused,3.2,3632
+45nm,5ns,32,2,mac_gated,3.2,3632
+45nm,5ns,32,2,idle,3.2,3632

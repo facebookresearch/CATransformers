@@ -31,10 +31,10 @@ acc_config = namedtuple(
 
 # The maximum accelerator config might not be able to fit the max of each of the above aspects of the core
 max_acc_config_per_dim = acc_config(
-    4, 4, 256, 256, 256, 8*1024*1024, 1*1024*1024, 128, -1)
+    528, 16896, 16, 4, 16, (50)*1024*1024, 256*1024, 256, -1)
 
 # maximum accelerator config for area constraint
-max_acc_config = acc_config(4, 4, 256, 64, 256, 8*1024*1024, 1*1024*1024, 128, -1)
+max_acc_config = acc_config(528, 16896, 16, 4, 16, (50)*1024*1024, 256*1024, 256, -1) 
 area_constraint = -1
 
 # potential accelerator configs to explore
@@ -109,17 +109,17 @@ def generate_all_cores_to_explore():
     glb_buffer_MB = HW_PARAMS["GLB_BUFFER"]
     core_cluster = HW_PARAMS["CLUSTER_NUM"]
 
-# Meta
-    for x in core_cluster:
-            for pe_x in width:
-                for pe_y in depth:
-                    print(pe_x, pe_y)
-                    for glb in glb_buffer_MB:
-                        for l2_sram in l2_sram_choices_KB:
-                                for bw in l2_bw:
-                                    config = acc_config(x, x,
-                                                    pe_x, pe_y, pe_x, (glb)*1024*1024, l2_sram* 1024,bw, -1)
-                                    check_if_acc_to_explore(config)
+# # Meta
+#     for x in core_cluster:
+#             for pe_x in width:
+#                 for pe_y in depth:
+#                     print(pe_x, pe_y)
+#                     for glb in glb_buffer_MB:
+#                         for l2_sram in l2_sram_choices_KB:
+#                                 for bw in l2_bw:
+#                                     config = acc_config(x, x,
+#                                                     pe_x, pe_y, pe_x, (glb)*1024*1024, l2_sram* 1024,bw, -1)
+#                                     check_if_acc_to_explore(config)
     
     # meta - grid search
     # config = acc_config(4, 4, 256, 64, 256, (8)*1024*1024, 1*1024*1024, 64, -1)
@@ -142,8 +142,10 @@ def generate_all_cores_to_explore():
     # check_if_acc_to_explore(config)
     # config = acc_config(4, 4, 256, 16, 256, (4)*1024*1024, 64*1024, 64, -1)
     # check_if_acc_to_explore(config)
-    # config = acc_config(4, 4, 256, 16, 256, (4)*1024*1024, 1*1024*1024, 128, -1)
-    # check_if_acc_to_explore(config)
+    # config = acc_config(640, 5120, 16, 4, 16, (6)*1024*1024, 64*1024, 128, -1)
+
+    config = acc_config(528, 16896, 16, 4, 16, (50)*1024*1024, 256*1024, 256, -1)
+    check_if_acc_to_explore(config)
 
 
 

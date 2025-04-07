@@ -1,0 +1,67 @@
+architecture:
+  subtree:
+  - attributes:
+      global_cycle_seconds: 1e-09
+      technology: 22nm
+    local:
+    - attributes:
+        block-size: 4
+        type: LPDDR4
+        width: 32
+        word-bits: 8
+      class: DRAM
+      name: DRAM
+    name: system
+    subtree:
+    - attributes:
+        technology: 22nm
+      local:
+      - attributes:
+          block-size: 4
+          memory_depth: 1048576
+          memory_width: 32
+          meshX: 1
+          meshY: 1
+          n_banks: 4
+          read_bandwidth: 128
+          word-bits: 8
+          write_bandwidth: 128
+        class: smartbuffer_SRAM
+        name: GLB_Buffer
+      name: DSA
+      subtree:
+      - local:
+        - attributes:
+            block-size: 4
+            memory_depth: 32768
+            memory_width: 32
+            meshX: 1
+            meshY: 1
+            n_banks: 4
+            read_bandwidth: 8
+            word-bits: 8
+            write_bandwidth: 8
+          class: smartbuffer_SRAM
+          name: L2_Buffer
+        name: core[0..0]
+        subtree:
+        - local:
+          - attributes:
+              block-size: 1
+              depth: 12
+              meshX: 128
+              meshY: 1
+              read_bandwidth: 2
+              width: 8
+              word-bits: 8
+              write_bandwidth: 2
+            class: regfile
+            name: L1_Buffer
+          - attributes:
+              datawidth: 8
+              meshX: 128
+              meshY: 1
+            class: intmac
+            name: mac
+          name: PE[0..127]
+  version: 0.3

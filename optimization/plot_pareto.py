@@ -231,7 +231,7 @@ def pareto_frontier_hw(save_name, directory):
     plt.savefig(f"{directory}/{save_name}/{save_name}_curve.png")
 
 
-def pareto_frontier_overlap(plot_names, label_names):
+def pareto_frontier_overlap(plot_names, label_names, directory):
     area_constraint = AREA_CONSTRAINT_VALUE
     tops = MAX_TOPS
     # Filter data points by area constraint

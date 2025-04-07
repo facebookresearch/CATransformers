@@ -50,7 +50,7 @@ def initialize_accelerator():
     curr_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)))
     import time
 
-    tmp_dir = os.path.join(os.path.dirname(curr_dir), "tmp")
+    tmp_dir = os.path.join(os.path.dirname(curr_dir), "tmp_" + str(time.time()))
 
     gemm_dir = os.path.join(tmp_dir, "GEMM")
     vc_dir = os.path.join(tmp_dir, "vector_core")
@@ -79,7 +79,7 @@ def initialize_accelerator():
 def reset_accelerator():
     curr_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../")
 
-    tmp_dir = os.path.join(os.path.dirname(curr_dir), "tmp")
+    tmp_dir = os.path.join(os.path.dirname(curr_dir), "tmp_2")
 
     if (os.path.exists(tmp_dir)):
         os.system("rm -rf " + str(tmp_dir))

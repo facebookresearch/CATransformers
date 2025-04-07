@@ -13,6 +13,7 @@ from dram_model import Fab_DRAM
 from hdd_model  import Fab_HDD
 from ssd_model  import Fab_SSD
 from logic_model  import Fab_Logic
+from configurations import OPERATIONAL_CARBON_INTENSITY, CARBON_INTENSITY_LOC
 
 debug = False
 
@@ -54,10 +55,10 @@ def embodied_carbon_estimate(area, hbm):
     ic_yield = 0.875
     node_technology = 22
     ###################
-
+    print("Calculating embodied carbon at" + CARBON_INTENSITY_LOC)
 
     chip_logic = Fab_Logic(gpa  = "95",
-                      carbon_intensity = "loc_taiwan",
+                      carbon_intensity = CARBON_INTENSITY_LOC,
                       process_node = node_technology,
                       fab_yield=ic_yield)
 
@@ -84,10 +85,13 @@ def operational_carbon_estimate(energy):
 def initialize_carbon_intensity(zone="US-CAL-CISO", start="2023-01-01", end="2024-01-01"):
     global avg_carbon_intensity
 
-    # data = query_emaps_zone(zone, start, end)
-    # avg_carbon_intensity = (data["AER"].mean())
-    avg_carbon_intensity = 262.66632420091327 # use pre computed number
-    print("Carbon Intensity initialized for " + zone + " in between " + start + " and " + end + " as: " + str(avg_carbon_intensity))
+    if OPERATIONAL_CARBON_INTENSITY != None:
+        avg_carbon_intensity = OPERATIONAL_CARBON_INTENSITY
+        # avg_carbon_intensity = 262.66632420091327 # use pre computed number
+    else:
+        data = query_emaps_zone(zone, start, end)
+        avg_carbon_intensity = (data["AER"].mean())
+    print("Carbon Intensity initialized as: " + str(avg_carbon_intensity))
 
 # Function to retrieve dara and format
 def query_emaps_zone(zone, start_date, end_date):

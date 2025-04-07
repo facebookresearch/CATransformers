@@ -5,7 +5,7 @@ from ..utils import store_obj_to_file, load_obj_from_file
 
 # torch module loads
 import torch
-from transformers import LlamaTokenizer, LlamaForCausalLM
+from transformers import LlamaTokenizer, LlamaForCausalLM, LlamaConfig, LlamaModel
 from transformers.utils import is_torch_fx_available
 
 import os
@@ -19,8 +19,8 @@ if is_torch_fx_available():
 
 
 class LlamaIR(BaseModelIR):
-    def __init__(self, model_name="llama2", tmp_width=1):
-        super().__init__(model_name, tmp_width)
+    def __init__(self, model_name="llama2", tmp_width=1, model_config=None):
+        super().__init__(model_name, tmp_width, model_config)
 
         self.out_dir = None
         self.graphmodule = None
@@ -32,8 +32,17 @@ class LlamaIR(BaseModelIR):
 
         if self.model_name == "llama2":
             # Initializing a LLaMA llama-7b style configuration LlamaForCausalLM
-            self.model = LlamaForCausalLM.from_pretrained(
+            if(self.model_config!=None):
+                config = LlamaConfig.from_pretrained("meta-llama/Llama-2-7b-hf", hidden_size=self.model_config['hidden_size'],
+                                                    num_hidden_layers=self.model_config['num_hidden_layers'], 
+                                                    intermediate_size=self.model_config['intermediate_size'],
+                                                    num_attention_heads=self.model_config['num_attn_heads'],
+                                                    attn_implementation="eager", token='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')
+                self.model = LlamaForCausalLM(config)
+            else:
+                self.model = LlamaForCausalLM.from_pretrained(
                 "meta-llama/Llama-2-7b-hf", attn_implementation="eager", token='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')
+
             self.tokenizer = LlamaTokenizer.from_pretrained(
                 "meta-llama/Llama-2-7b-hf", token='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', legacy=True)
         else:
@@ -86,6 +95,6 @@ class LlamaIR(BaseModelIR):
     def create_graph_from_symbolic_trace(self):
         super().create_graph_from_symbolic_trace()
 
-    def extract_model_graph(self, micro_batch_size=1, sequence_length=64, force_reextract_model=False,):
+    def extract_model_graph(self, micro_batch_size=1, sequence_length=64, force_reextract_model=False, model_config=None):
         self.load_language_model(
-            self.out_dir, micro_batch_size, sequence_length, force_reextract_model)
+            self.out_dir, micro_batch_size, sequence_length, force_reextract_model, model_config=model_config)

@@ -9,6 +9,7 @@ import sys
 from copy import copy
 from itertools import product
 from optimization import optimizer_carbon, optimizer_latency, optimizer_all, optimizer_energy, optimizer_all_hw, optimizer_energy_model
+from optimization import optimizer_carbon_hf, optimizer_latency_hf
 from optimization import plot_pareto
 def get_parser_args():
     parser = argparse.ArgumentParser()
@@ -20,7 +21,6 @@ def get_parser_args():
 def main():
     home_dir = os.getcwd()
     directory = f"{home_dir}/results"
-
     parser, args = get_parser_args()
     
     if args.metric == "carbon":
@@ -41,6 +41,12 @@ def main():
     elif args.metric == "energy-model":
         optimize_energy_model(args)
         plot_pareto.pareto_frontier_energy_model(args.name, directory)
+    elif args.metric == "hf-carbon":
+        optimizer_carbon_hf.optimize(args.name)
+        plot_pareto.pareto_frontier_carbon(args.name, directory)
+    elif args.metric == "hf-latency":
+        optimizer_latency_hf.optimize(args.name)
+        plot_pareto.pareto_frontier_latency(args.name, directory)
     else:
         print("Error: invalid metric")
         parser.print_help()

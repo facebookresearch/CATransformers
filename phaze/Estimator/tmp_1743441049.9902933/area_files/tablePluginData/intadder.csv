@@ -1,0 +1,2 @@
+technology,latency,datawidth,num_pipeline_stages,action,energy,area
+45nm,5ns,16,1,add|read|write|leak|update,1,0

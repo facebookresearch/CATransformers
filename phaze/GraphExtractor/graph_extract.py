@@ -56,9 +56,9 @@ def extract_graph(model_name, max_tmp_width=1, micro_batch_size=1, sequence_leng
         for width in tmp_widths:
             bert = extract_model_from_file(width)
             if bert is None:
-                bert = BertIR(model_name, width, model_config)
+                bert = BertIR(model_name, width, model_config=model_config)
                 bert.extract_model_graph(
-                    micro_batch_size, sequence_length, force_reextract_model)
+                    micro_batch_size, sequence_length, force_reextract_model, model_config=model_config)
             bertmodels.append(bert)
         return bertmodels
 
@@ -95,9 +95,9 @@ def extract_graph(model_name, max_tmp_width=1, micro_batch_size=1, sequence_leng
         if llama:
             return [llama]
 
-        llama = LlamaIR(model_name)
+        llama = LlamaIR(model_name, model_config=model_config)
         llama.extract_model_graph(
-            micro_batch_size, sequence_length, force_reextract_model)
+            micro_batch_size, sequence_length, force_reextract_model, model_config=model_config)
 
         return [llama]
     elif model_name in transformer_models:
@@ -129,4 +129,4 @@ def extract_graph(model_name, max_tmp_width=1, micro_batch_size=1, sequence_leng
 
     else:
         raise ValueError(
-            "Only following models '{}' are currently imported.".format(supported_models))
+            "Only following models '{}' are currently imported, but got {}".format(supported_models, model_name))

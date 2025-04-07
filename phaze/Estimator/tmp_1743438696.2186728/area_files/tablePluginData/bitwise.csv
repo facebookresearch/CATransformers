@@ -1,0 +1,2 @@
+technology,latency,datawidth,action,energy,area
+45,5,16,process|read|write|leak|update,0.02,0

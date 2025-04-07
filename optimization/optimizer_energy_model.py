@@ -42,17 +42,30 @@ def calc_tops(hw_param) -> float:
 def evaluate(trial, parameters, csv_file_name):
 
     hw_config = {}
-    # a100 architecture
 
-    hw_config["num_tc"] = 432
-    hw_config["num_vc"] = 6912
+     # h100 architecture
+
+    hw_config["num_tc"] = 528
+    hw_config["num_vc"] = 16896
 
     hw_config["width"] = 16
     hw_config["depth"] = 4
     hw_config["width_vc"] = 16
-    hw_config["GLB_Buffer"] = 32*1024 *1024
-    hw_config["L2_Buffer"] = 192*1024
-    hw_config["L2_BW"] = 128
+    hw_config["GLB_Buffer"] = 50*1024 *1024
+    hw_config["L2_Buffer"] = 256*1024
+    hw_config["L2_BW"] = 256
+
+    # # a100 architecture
+
+    # hw_config["num_tc"] = 432
+    # hw_config["num_vc"] = 6912
+
+    # hw_config["width"] = 16
+    # hw_config["depth"] = 4
+    # hw_config["width_vc"] = 16
+    # hw_config["GLB_Buffer"] = 32*1024 *1024
+    # hw_config["L2_Buffer"] = 192*1024
+    # hw_config["L2_BW"] = 128
 
 # v100 architecture
     # hw_config["num_tc"] = 640
@@ -159,7 +172,7 @@ def optimize(run_name):
         objectives={
             # `threshold` arguments are optional
             "accuracy": ObjectiveProperties(minimize=False, threshold=0.1),
-            "energy": ObjectiveProperties(minimize=True,threshold=2.5),
+            "energy": ObjectiveProperties(minimize=True,threshold=3.0),
         },
         outcome_constraints=[
             LATENCY_CONSTRAINT, 

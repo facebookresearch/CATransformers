@@ -1,0 +1,84 @@
+ERT_summary:
+    version: '0.4'
+    table_summary:
+      - name: system.DSA.core[0..0].PE[0..4095].L1_Buffer
+        actions:
+          - name: read
+            average_energy: 0.190888
+            max_energy: 0.190888
+            min_energy: 0.190888
+          - name: write
+            average_energy: 0.254518
+            max_energy: 0.254518
+            min_energy: 0.254518
+          - name: idle
+            energy: 0.0
+        primitive_estimation(s):
+          - name: system.DSA.core[0..0].PE[0..4095].L1_Buffer
+            estimator: Library
+      - name: system.DSA.core[0..0].PE[0..4095].mac
+        actions:
+          - name: mac_random
+            energy: 0.469035
+          - name: mac_reused
+            energy: 0.469035
+          - name: mac_gated
+            energy: 0.469035
+          - name: idle
+            energy: 0.469035
+        primitive_estimation(s):
+          - name: system.DSA.core[0..0].PE[0..4095].mac
+            estimator: Library
+      - name: system.DRAM
+        actions:
+          - name: read
+            energy: 256.0
+          - name: write
+            energy: 256.0
+          - name: idle
+            energy: 0.0
+        primitive_estimation(s):
+          - name: system.DRAM
+            estimator: CACTI
+      - name: system.DSA.core[0..0].L2_Buffer
+        actions:
+          - name: write
+            average_energy: 8.75605
+            max_energy: 15.5121
+            min_energy: 2.0
+          - name: read
+            average_energy: 9.129444
+            max_energy: 16.672594
+            min_energy: 1.586294
+          - name: idle
+            energy: 2.0
+        primitive_estimation(s):
+          - name: storage
+            estimator: CACTI
+          - name: address_generators[0]
+            estimator: dummy_table
+          - name: address_generators[1]
+            estimator: dummy_table
+          - name: address_generators[0..1]
+            estimator: dummy_table
+      - name: system.DSA.GLB_Buffer
+        actions:
+          - name: write
+            average_energy: 20.6046
+            max_energy: 39.2092
+            min_energy: 2.0
+          - name: read
+            average_energy: 24.296144
+            max_energy: 47.005994
+            min_energy: 1.586294
+          - name: idle
+            energy: 2.0
+        primitive_estimation(s):
+          - name: storage
+            estimator: CACTI
+          - name: address_generators[0]
+            estimator: dummy_table
+          - name: address_generators[1]
+            estimator: dummy_table
+          - name: address_generators[0..1]
+            estimator: dummy_table

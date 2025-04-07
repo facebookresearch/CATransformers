@@ -1,0 +1,13 @@
+ART:
+    version: '0.4'
+    tables:
+      - name: system.DSA.core[0..3].PE[0..255].L1_Buffer
+        area: 0.348053
+      - name: system.DSA.core[0..3].PE[0..255].mac
+        area: 379.846667
+      - name: system.DRAM
+        area: 0.0
+      - name: system.DSA.core[0..3].L2_Buffer
+        area: 815621.0
+      - name: system.DSA.GLB_Buffer
+        area: 12235100.0

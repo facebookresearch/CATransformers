@@ -81,6 +81,7 @@ phaze_op_mapping = {
     "clone": "Clone",
     "flatten": "View",
     "contiguous": "View",
+    "triu": "View",
     "expand": "Expand",
     "unsqueeze": "Unsqueeze",
     "slice": "Slice",

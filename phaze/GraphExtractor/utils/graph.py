@@ -89,6 +89,7 @@ class PhazeGraph:
             self.repeat_layers = [i for i in self.layer_ids if i > 0]
             self.repeat_layers_first.append(0)
             self.repeat_layers_dict[0] = [i for i in self.layer_ids if i > 0]
+            
         print(self.repeat_layers)
         print(self.repeat_layers_first)
         print(self.repeat_layers_dict)
