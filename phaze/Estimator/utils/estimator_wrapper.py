@@ -49,8 +49,11 @@ def initialize_accelerator():
 
     curr_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)))
     import time
+    # use this to allow multiple tmp folders (parallelize runs)
+    # tmp_dir = os.path.join(os.path.dirname(curr_dir), "tmp_" + str(time.time()))
 
-    tmp_dir = os.path.join(os.path.dirname(curr_dir), "tmp_" + str(time.time()))
+    tmp_dir = os.path.join(os.path.dirname(curr_dir), "tmp")
+
 
     gemm_dir = os.path.join(tmp_dir, "GEMM")
     vc_dir = os.path.join(tmp_dir, "vector_core")

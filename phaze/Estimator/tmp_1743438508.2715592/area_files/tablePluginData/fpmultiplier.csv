@@ -1,2 +1,0 @@
-technology,latency,exponent,mantissa,sign,num_pipeline_stages,action,energy,area
-45nm,5ns,8,8,0,2,mult_random|read|write|leak|update,3,0

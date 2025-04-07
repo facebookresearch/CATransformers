@@ -1,2 +1,0 @@
-technology,latency,datawidth,action,energy,area
-45nm,5ns,16,compare|read|write|leak|update,0.05,0

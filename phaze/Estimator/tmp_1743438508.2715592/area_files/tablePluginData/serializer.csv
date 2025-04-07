@@ -1,2 +1,0 @@
-technology,latency,datawidth,ratio,action,energy,area
-45nm,5ns,16,4,serialize|read|write|leak|update,1.4,0

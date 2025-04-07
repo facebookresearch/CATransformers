@@ -1,2 +1,0 @@
-technology,latency,width,type,action,energy,area
-45nm,5ns,64,LPDDR4,read|read|write|leak|update,100,0
