@@ -7,8 +7,10 @@
 """
 
 """
-In this file we initialize the required files to run MoPE-CLIP based pruning for the number of heads and FFN dimension 
+In this file we initialize the required files to run MoPE-CLIP
+based pruning for the number of heads and FFN dimension 
 only needs to be ran one for each model architecture
+This is our own implementation of the techniques described in the paper (https://arxiv.org/abs/2403.07839) 
 """
 
 from pruning import trim_attn_head_idx, trim_ffn_idx

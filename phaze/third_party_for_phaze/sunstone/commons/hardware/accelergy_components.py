@@ -5,6 +5,10 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 """
+"""
+Implementation of the following modules is borrowed from from https://github.com/compstruct/sunstone
+Licensed under BSD 2-Clause License
+"""
 
 from abc import ABC, abstractmethod
 

@@ -5,7 +5,10 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 """
-
+"""
+Implementation of the following modules is borrowed from from https://github.com/mlfoundations/open_clip
+Licensed under MIT License
+"""
 OPENAI_DATASET_MEAN = (0.48145466, 0.4578275, 0.40821073)
 OPENAI_DATASET_STD = (0.26862954, 0.26130258, 0.27577711)
 IMAGENET_MEAN = (0.485, 0.456, 0.406)

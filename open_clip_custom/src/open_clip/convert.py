@@ -5,7 +5,10 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 """
-
+"""
+Implementation of the following modules is borrowed from from https://github.com/mlfoundations/open_clip
+Licensed under MIT License
+"""
 """ Conversion functions for 3rd part state-dicts and non-torch native checkpoint formats.
 """
 from typing import Union
