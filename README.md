@@ -1,5 +1,5 @@
 # CarbonNAAS
-CarbonNAAS is a carbon-aware architecture search framework that enables sustainability-driven co-optimization of ML models and hardware architectures. The framework currently supports running optimizations for CLIP-based models. 
+CarbonNAAS is a carbon-aware neural network and hardware architecture search framework that enables sustainability-driven co-optimization of ML models and accelerator hardware. The framework currently supports optimizations for Contrastive Language-Image Pre-training (CLIP) models. 
 
 ## Install Dependencies
 To install the dependencies for CarbonNAAS, create a conda environment and run the setup script:
