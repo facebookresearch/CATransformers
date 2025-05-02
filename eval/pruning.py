@@ -1,4 +1,12 @@
 """
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+# 
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+"""
+
+"""
 This file provides several methods to prune the vision and text transformers of a CLIP model
 Namely it supports:
 -  pruning number of layers from the middile, or based on cosine-similarity importance

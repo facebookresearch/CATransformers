@@ -1,4 +1,18 @@
 """
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+# 
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+"""
+
+"""
+Implementation of the following modules is adpated from from 
+https://github.com/mit-han-lab/hardware-aware-transformers/blob/master/fairseq/modules/multihead_attention_super.py
+Licensed under MIT License
+"""
+
+"""
 # This custom multiheaded_attention is edited based on prior work HAT. 
 # We do this so that only the embedding dimension is pruned, but the total QKV dimension remains the same
 # the QKV dimension is fixed for each attention head, and is only pruned, by pruning the number of heads. 
@@ -9,14 +23,6 @@
 # Paper: https://arxiv.org/abs/2005.14187
 # Project page: https://hanruiwang.me/project_pages/hat/
 """
-
-# This custom multiheaded_attention is edited based on prior work HAT
-#
-# HAT: Hardware-Aware Transformers for Efficient Natural Language Processing
-# Hanrui Wang, Zhanghao Wu, Zhijian Liu, Han Cai, Ligeng Zhu, Chuang Gan and Song Han
-# The 58th Annual Meeting of the Association for Computational Linguistics (ACL), 2020.
-# Paper: https://arxiv.org/abs/2005.14187
-# Project page: https://hanruiwang.me/project_pages/hat/
 
 import torch
 from torch import nn

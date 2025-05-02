@@ -1,5 +1,5 @@
 # CarbonNAAS
-CarbonNAAS is a carbon-aware architecture search framework that enables sustainability-driven co-optimization of ML models and hardware architectures. The framework currently supports running optimizations for CLIP-based models. 
+CarbonNAAS is a carbon-aware neural network and hardware architecture search framework that enables sustainability-driven co-optimization of ML models and accelerator hardware. The framework currently supports optimizations for Contrastive Language-Image Pre-training (CLIP) models. 
 
 ## Install Dependencies
 To install the dependencies for CarbonNAAS, create a conda environment and run the setup script:
@@ -103,3 +103,8 @@ orig_models ={"ViT-B-16": vit_b_16, "ViT-B-32": vit_b_32}
 |-- final_model_training    : For training pruned models and evaluating with CLIP Benchmark
 |-- phaze                   : Hardware Architecture Estimator
 ```
+
+## LICENSE
+
+The majority of CarbonNAAS is licensed under CC-BY-NC, however portions of the project are available under separate license terms: [Phaze](https://github.com/msr-fiddle/phaze.git) and [OpenCLIP](https://github.com/openai/CLIP) is licensed under the MIT license.
+

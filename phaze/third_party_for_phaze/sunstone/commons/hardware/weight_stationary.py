@@ -1,3 +1,15 @@
+"""
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+"""
+"""
+Implementation of the following modules is borrowed from from https://github.com/compstruct/sunstone
+Licensed under BSD 2-Clause License
+"""
+
 from hardware.eyeriss import size_in_bits, create_accelerator_from_mem_sizes
 from hardware.accelerator import *
 import sys

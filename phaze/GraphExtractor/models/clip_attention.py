@@ -1,5 +1,13 @@
-### Custom CLIP attention implementation modified from Hugging Face's Transformer CLIPModel
-### THis allows us to fix the head dimension so we can have dynamic number of heads. 
+"""
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+"""
+
+### Custom CLIP attention implementation leveraging HF transformer CLIP model to fix the head dimension
+### This allows us to modify the number of heads, independenty of the embedding dimension
 
 from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
@@ -92,10 +100,6 @@ class CLIPAttentionCustom(nn.Module):
         attn_weights = nn.functional.softmax(attn_weights, dim=-1)
 
         if output_attentions:
-            # this operation is a bit akward, but it's required to
-            # make sure that attn_weights keeps its gradient.
-            # In order to do so, attn_weights have to reshaped
-            # twice and have to be reused in the following
             attn_weights_reshaped = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
             attn_weights = attn_weights_reshaped.view(bsz * self.num_heads, tgt_len, src_len)
         else:

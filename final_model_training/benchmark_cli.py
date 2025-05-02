@@ -1,3 +1,11 @@
+"""
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+# 
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+"""
+
 """Console script for clip_benchmark."""
 ### Modified based on Clip_benchmarks' cli.py file, inorder to run our pruned models. 
 import argparse

@@ -1,3 +1,15 @@
+"""
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+"""
+"""
+Implementation of the following modules is borrowed from from https://github.com/msr-fiddle/phaze
+Licensed under MIT License
+"""
+
 import sys
 
 from examples.simba_like.cnn_optimizer_wrapper import CNNOptimizer  # noqa
