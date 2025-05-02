@@ -107,16 +107,16 @@ def estimate_operational_carbon(models_info, cc):
                     t_op_latency_component = {}
 
                     if layer_id in repeat_layer_first:
-                        t_op_carbon = op_carbon * (len(repeat_layer_dict[layer_id]))
-                        t_seq_lat = latency * (len(repeat_layer_dict[layer_id]))
-                        t_energy = energy * (len(repeat_layer_dict[layer_id]))
+                        t_op_carbon = op_carbon * (len(repeat_layer_dict[layer_id]) + 1) # add repeated later + current layer
+                        t_seq_lat = latency * (len(repeat_layer_dict[layer_id])  +1 )
+                        t_energy = energy * (len(repeat_layer_dict[layer_id])+ 1)
                         print(layer_id)
                         print(latency)
                         print(t_seq_lat)
                         for name , carbon in comp_carbon.items():
-                            t_op_carbon_component[name] = carbon * (len(repeat_layer_dict[layer_id]))
+                            t_op_carbon_component[name] = carbon * (len(repeat_layer_dict[layer_id]) +1)
                         for name, latency in comp_lat.items():
-                            t_op_latency_component[name] = latency * (len(repeat_layer_dict[layer_id]))
+                            t_op_latency_component[name] = latency * (len(repeat_layer_dict[layer_id])+1)
                     else:
                         t_op_carbon = op_carbon
                         t_seq_lat = latency 

@@ -85,7 +85,7 @@ class PhazeGraph:
             for i in unique_layers.keys():
                 self.repeat_layers_first.append(i)
                 self.repeat_layers_dict[i] = unique_layers[i]
-        elif (self.model_name in language_models):
+        else:
             self.repeat_layers = [i for i in self.layer_ids if i > 0]
             self.repeat_layers_first.append(0)
             self.repeat_layers_dict[0] = [i for i in self.layer_ids if i > 0]

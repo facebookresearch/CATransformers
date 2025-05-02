@@ -10,7 +10,7 @@ from eval import model_constants
 from eval import model_eval_hf as model_eval
 from phaze import main
 from configurations_hf import TEXT_MODEL_PARAMS, HW_PARAMS, NUM_TRIALS, AREA_CONSTRAINT, LATENCY_CONSTRAINT, MAX_TOPS_CONSTRAINT, FREQUENCY, MODEL_ARCH
-import csv, os
+import csv, os, sys
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -71,6 +71,10 @@ def evaluate(trial, parameters, csv_file_name):
     return {"accuracy": (accuracy, 0.0), "carbon": (carbon, 0.0), "area": (area, 0.0), "latency": (latency,0.0), "energy": (energy, 0.0), "tops": (tops, 0.0)}
 
 def optimize(run_name):
+
+    if MODEL_ARCH not in model_constants.orig_models:
+        print(f"ERROR: Invalid model type: {MODEL_ARCH}, exiting...")
+        sys.exit(1)
 
     home_dir = os.getcwd()
     directory = f"{home_dir}/results/{run_name}"

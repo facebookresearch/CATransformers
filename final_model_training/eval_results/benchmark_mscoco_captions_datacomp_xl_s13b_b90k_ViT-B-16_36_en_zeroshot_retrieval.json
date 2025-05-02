@@ -1,1 +1,0 @@
-{"dataset": "wds/mscoco_captions", "model": "ViT-B-16_36", "pretrained": "datacomp_xl_s13b_b90k", "task": "zeroshot_retrieval", "metrics": {"image_retrieval_recall@1": 0.398040771484375, "text_retrieval_recall@1": 0.5734000205993652}, "language": "en"}

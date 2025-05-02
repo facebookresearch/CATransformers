@@ -5,3 +5,4 @@ from .opt import OptIR
 from .llama import LlamaIR
 from .custom_transformers import TransformerIR
 from .clip import ClipIR
+from .vit import VitIR

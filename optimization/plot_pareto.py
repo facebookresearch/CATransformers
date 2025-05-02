@@ -51,8 +51,8 @@ def pareto_frontier_latency(save_name, directory):
     cbar.set_label('Latency (s)')
     plt.xlabel('Carbon (kgCO2e)')
     plt.ylabel('Accuracy (%)')
-    plt.xlim(0.3, 0.8)
-    plt.ylim(0.0, 0.4)
+    # plt.xlim(0.3, 0.8)
+    # plt.ylim(0.0, 0.4)
     area_mm = "{:.1f}".format(area_constraint/1000000)
     # plt.title(f'Pareto Frontier with Area Constraint {area_mm} mm^2')
     plt.savefig(f"{directory}/{save_name}/{save_name}_curve_carbon.png")
@@ -103,10 +103,8 @@ def pareto_frontier_energy(save_name, directory):
     cbar.set_label('Latency (s)')
     plt.xlabel('Carbon (kgCO2e)')
     plt.ylabel('Accuracy (%)')
-    plt.xlim(0.3, 0.8)
-    plt.ylim(0.0, 0.4)
-    area_mm = "{:.1f}".format(area_constraint/1000000)
-    # plt.title(f'Pareto Frontier with Area Constraint {area_mm} mm^2')
+    # plt.xlim(0.3, 0.8)
+    # plt.ylim(0.0, 0.4)
     plt.savefig(f"{directory}/{save_name}/{save_name}_curve_carbon.png")
 
 
@@ -143,10 +141,8 @@ def pareto_frontier_carbon(save_name, directory):
     cbar.set_label('Latency (s)')
     plt.xlabel('Carbon (kgCO2e)')
     plt.ylabel('Accuracy (%)')
-    plt.xlim(0.3, 0.8)
-    plt.ylim(0.0, 0.4)
-    area_mm = "{:.1f}".format(area_constraint/1000000)
-    # plt.title(f'Pareto Frontier with Area Constraint {area_mm} mm^2, latency Constraint {latency_constraint} s')
+    # plt.xlim(0.3, 0.8)
+    # plt.ylim(0.0, 0.4)
     plt.savefig(f"{directory}/{save_name}/{save_name}_curve_new.png")
 
 def pareto_frontier_all(save_name, directory):
@@ -189,10 +185,8 @@ def pareto_frontier_all(save_name, directory):
     cbar.set_label('Latency (s)')
     plt.xlabel('Carbon (kgCO2e)')
     plt.ylabel('Accuracy (%)')
-    plt.xlim(0.3, 0.8)
-    plt.ylim(0.0, 0.4)
-    area_mm = "{:.1f}".format(area_constraint/1000000)
-    # plt.title(f'Pareto Frontier with Area Constraint {area_mm} mm^2')
+    # plt.xlim(0.3, 0.8)
+    # plt.ylim(0.0, 0.4)
     plt.savefig(f"{directory}/{save_name}/{save_name}_curve_carbon.png")
 
 
@@ -226,8 +220,6 @@ def pareto_frontier_hw(save_name, directory):
     plt.scatter(frontier_points['Carbon'], frontier_points['Latency']*1000, s=100, label='Pareto frontier')
     plt.xlabel('Carbon (kgCO2e)')
     plt.ylabel('Latency (ms)')
-    area_mm = "{:.1f}".format(area_constraint/1000000)
-    # plt.title(f'Pareto Frontier with Area Constraint {area_mm} mm^2')
     plt.savefig(f"{directory}/{save_name}/{save_name}_curve.png")
 
 
@@ -241,14 +233,14 @@ def pareto_frontier_overlap(plot_names, label_names, directory):
         frontier_points = pd.read_csv(f"{directory}/{save_name}/{save_name}_curve.csv")
         plt.rcParams['font.size'] = 24
         plt.scatter(frontier_points['Carbon'], frontier_points['Accuracy'], color=colors[save_name], label=label_names[i])
-        plt.xlim(0.3, 0.8)
-        plt.ylim(0.0, 0.5)
+        # plt.xlim(0.3, 0.8)
+        # plt.ylim(0.0, 0.5)
         plt.legend()
         plt.xlabel('Carbon (kgCO2e)')
         plt.ylabel('Accuracy (%)')
         area_mm = "{:.1f}".format(area_constraint/1000000)
         # plt.title(f'Pareto Frontier with Area Constraint {area_mm} mm^2')
-    plt.savefig(f"{directory}/area_{area_mm}_compare.png")
+    plt.savefig(f"{directory}/overlap_compare.png")
 
 def pareto_frontier_energy_model(save_name, directory):
     df = pd.read_csv(f"{directory}/{save_name}/{save_name}.csv")
@@ -291,7 +283,7 @@ def pareto_frontier_energy_model(save_name, directory):
     cbar.set_label('Latency (s)')
     plt.xlabel('Carbon (kgCO2e)')
     plt.ylabel('Accuracy (%)')
-    plt.xlim(0.3, 0.8)
-    plt.ylim(0.0, 0.4)
+    # plt.xlim(0.3, 0.8)
+    # plt.ylim(0.0, 0.4)
     # plt.title(f'Pareto Frontier with Area Constraint {area_mm} mm^2')
     plt.savefig(f"{directory}/{save_name}/{save_name}_curve_carbon.png")

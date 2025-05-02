@@ -6,7 +6,7 @@ Evaluation code is borrowed from https://github.com/mlfoundations/datacomp/blob/
 Licensed under MIT License, see ACKNOWLEDGEMENTS for details.
 """
 
-import os
+import os, sys
 import argparse
 
 import torch
@@ -295,6 +295,8 @@ def train_and_eval(model_config, model_arch, pretrained):
 
     checkpoint_name = f"model_eval_{model_arch}_{pretrained}_{text_layer}_{text_embedding_dim}_{text_ffn_dim}_{text_head_num}_{vision_layer}_{vision_embedding_dim}_{vision_ffn_dim}_{vision_head_num}"
     home_dir = os.getcwd()
+    dataset_dir = os.path.join(home_dir, "dataset")
+    os.makedirs(dataset_dir, exist_ok=True)
     dataset_location = f"{home_dir}/dataset/train2014.csv"
 
     # check if model config already trained befores
@@ -302,7 +304,14 @@ def train_and_eval(model_config, model_arch, pretrained):
     if os.path.exists(checkpoint_path):
         print("checkpoint already exists!")
     else:
-        command = f"torchrun --nproc_per_node=8 {home_dir}/open_clip_custom/src/open_clip_train/main.py --dataset-type='csv' --train-data={dataset_location} \
+        device_count = torch.cuda.device_count()
+        print(f"Found {device_count} GPUs")
+
+        if device_count == 0:
+            print(f"ERROR: CLIP training requires at least one GPU, exiting...")
+            sys.exit(1)
+
+        command = f"torchrun --nproc_per_node={device_count} {home_dir}/open_clip_custom/src/open_clip_train/main.py --dataset-type='csv' --train-data={dataset_location} \
         --batch-size 64     --lr 1e-5     --wd 0.1     --epochs=1    --workers=32      --model={model_arch}   --pretrained={pretrained} \
         --text-layers {text_layer} --text-embed-dim {text_embedding_dim} --text-ffn-dim {text_ffn_dim} --text-head-num {text_head_num} \
         --vision-layers {vision_layer} --vision-embed-dim {vision_embedding_dim} --vision-ffn-dim {vision_ffn_dim} --vision-head-num {vision_head_num} --name {checkpoint_name} --scale-flops"

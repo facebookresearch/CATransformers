@@ -15,6 +15,7 @@ pip3 install gurobipy
 pip3 install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu121
 pip3 install transformers==4.45.2
 pip3 install graphviz pygraphviz 
+pip3 install evaluate
 
 
 ## not needed for non-megatron models

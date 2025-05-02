@@ -9,7 +9,11 @@ NUM_TRIALS = 100
 
 # Model Architecture
 MODEL_ARCH= 'ViT-B-16'
+# MODEL_ARCH= 'ViT-B-32'
+
 PRETRAINED='datacomp_xl_s13b_b90k' # "Model checkpoint name to use from OpenCLIP"
+
+# Note: FFN and hidden dimension (embedding) are divided into 8 blocks
 
 # TEXT encoder
 TEXT_MODEL_PARAMS = {

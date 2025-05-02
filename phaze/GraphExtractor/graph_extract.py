@@ -6,8 +6,9 @@ from phaze.GraphExtractor.models import LlamaIR
 from phaze.GraphExtractor.models import BaseModelIR
 from phaze.GraphExtractor.models import TransformerIR
 from phaze.GraphExtractor.models import ClipIR
+from phaze.GraphExtractor.models import VitIR
 from .utils import load_obj_from_file, check_model
-from .utils import (bert_models, gpt_models, opt_models, llama_models, transformer_models, clip_models, language_models,
+from .utils import (bert_models, gpt_models, opt_models, llama_models, transformer_models, clip_models, language_models, vit_models
                     )
 
 # python imports
@@ -126,6 +127,17 @@ def extract_graph(model_name, max_tmp_width=1, micro_batch_size=1, sequence_leng
             micro_batch_size, sequence_length, force_reextract_model, model_config=model_config, pretrained=pretrained)
 
         return [clip]
+    if model_name in vit_models:
+        vit = extract_model_from_file(max_tmp_width)
+
+        if vit:
+            return [vit]
+
+        vit = VitIR(model_name)
+        vit.extract_model_graph(
+            micro_batch_size, sequence_length, force_reextract_model)
+
+        return [vit]
 
     else:
         raise ValueError(

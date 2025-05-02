@@ -6,32 +6,33 @@ from ax.exceptions.generation_strategy import GenerationStrategyRepeatedPoints
 # Plotting imports and initialization
 from ax.service.utils.report_utils import exp_to_df
 
-from eval import model_eval, model_constants
+from eval import model_constants
+from eval import model_eval_hf as model_eval
 from phaze import main
-from configurations import TEXT_MODEL_PARAMS, VISION_MODEL_PARAMS, HW_PARAMS, NUM_TRIALS, AREA_CONSTRAINT, MAX_TOPS_CONSTRAINT, FREQUENCY, MODEL_ARCH, PRETRAINED
+from configurations_hf import TEXT_MODEL_PARAMS, HW_PARAMS, NUM_TRIALS, AREA_CONSTRAINT, LATENCY_CONSTRAINT, MAX_TOPS_CONSTRAINT, FREQUENCY, MODEL_ARCH
 import csv, os, sys
 import pandas as pd
 import matplotlib.pyplot as plt
 
 def model_accuracy(model_param) -> float:
-        accuracy_ret, size = model_eval.train_and_eval(model_param, MODEL_ARCH, PRETRAINED)
-        return float(accuracy_ret['mean_recall@1']), size
+        model_hf_name = model_constants.orig_models[MODEL_ARCH]["hf-model"] 
+        accuracy_ret, size = model_eval.train_and_eval(model_param, model_hf_name)
+        return float(accuracy_ret), size
+
 
 def model_carbon(model_param, hw_param) -> float:
-        hf_pretrained = model_constants.orig_models[MODEL_ARCH]["hf-model"]
-        model = ["CLIP"]
-        phaze_seq_len = 77
+        model = [MODEL_ARCH]
+        phaze_seq_len = 512
         force_reextract_model = False
         force_reextract_estimates = True
         hbm_size = 1
 
         # model, phaze_seq_len, force_reextract_model, hbm_size, hw_param, model_param
-        carbon, latency, area, energy = main.estimate_carbon(model, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, hw_param, model_param, hf_pretrained)
+        carbon, latency, area, energy = main.estimate_carbon(model, phaze_seq_len, force_reextract_model, force_reextract_estimates, hbm_size, hw_param, model_param)
         return carbon, latency, area, energy
 
 def calc_tops(hw_param) -> float:
     return (hw_param["num_tc"] * hw_param["width"] * hw_param["depth"] * 2 * FREQUENCY) / (1000**4)
-
 
 # Evaluation Function
 def evaluate(trial, parameters, csv_file_name):
@@ -47,23 +48,17 @@ def evaluate(trial, parameters, csv_file_name):
     hw_config["L2_Buffer"] = parameters.get("l2_sram_choices_KB")*1024
     hw_config["L2_BW"] = parameters.get("l2_bw")
     
-    num_ffn_blocks = 8
+    num_ffn_blocks = 16
     text_block_size = model_constants.orig_models[MODEL_ARCH]["text_ffn_dim"] / num_ffn_blocks
-    vision_block_size = model_constants.orig_models[MODEL_ARCH]["vision_ffn_dim"] / num_ffn_blocks
 
-    num_hidden_blocks = 8
+    num_hidden_blocks = 16
     text_hidden_block_size = model_constants.orig_models[MODEL_ARCH]["text_embedding_dim"] / num_hidden_blocks
-    vision_hidden_block_size = model_constants.orig_models[MODEL_ARCH]["vision_embedding_dim"] / num_hidden_blocks
     
     model_config = {}
     model_config["num_hidden_layers"] = parameters.get("num_hidden_layers")
     model_config["intermediate_size"] = int(parameters.get("intermediate_size") * text_block_size)
     model_config["hidden_size"] = int(parameters.get("hidden_size") * text_hidden_block_size)
     model_config["num_attn_heads"] = parameters.get("num_attn_heads")
-    model_config["vision_num_hidden_layers"] = parameters.get("vision_num_hidden_layers")
-    model_config["vision_intermediate_size"] = int(parameters.get("vision_intermediate_size")* vision_block_size)
-    model_config["vision_hidden_size"] = int(parameters.get("vision_hidden_size") * vision_hidden_block_size)
-    model_config["vision_num_attn_heads"] = parameters.get("vision_num_attn_heads")
 
     accuracy, size= model_accuracy(model_config)
     carbon, latency, area, energy = model_carbon(model_config, hw_config)
@@ -73,7 +68,7 @@ def evaluate(trial, parameters, csv_file_name):
         writer = csv.writer(csvfile)
         writer.writerow([trial, accuracy, carbon, latency, parameters, size, area, energy, tops])
 
-    return {"accuracy": (accuracy, 0.0), "carbon": (carbon, 0.0), "area": (area, 0.0), "latency": (latency,0.0), "energy": (energy, 0.0), "tops": (tops, 0.0) }
+    return {"accuracy": (accuracy, 0.0), "carbon": (carbon, 0.0), "area": (area, 0.0), "latency": (latency,0.0), "energy": (energy, 0.0), "tops": (tops, 0.0)}
 
 def optimize(run_name):
 
@@ -85,6 +80,7 @@ def optimize(run_name):
     directory = f"{home_dir}/results/{run_name}"
     if not os.path.exists(directory):
         os.makedirs(directory)
+
     
     ax_client = AxClient()
     # ChoiceParameterConfig.is_ordered=True 
@@ -111,34 +107,10 @@ def optimize(run_name):
             }, 
             {
                 "name": f"num_attn_heads",
-                "type": "range",
-                "bounds": [TEXT_MODEL_PARAMS['MIN_ATTN_HEAD'], TEXT_MODEL_PARAMS['MAX_ATTN_HEAD']],
-                "value_type": "int"
+                "type": "choice",
+                "values": TEXT_MODEL_PARAMS['ATTN_HEAD'],
+                "is_ordered": True,
             }, 
-            {
-                "name": f"vision_num_hidden_layers",
-                "type": "range",
-                "bounds": [VISION_MODEL_PARAMS['MIN_VISION_LAYERS'], VISION_MODEL_PARAMS['MAX_VISION_LAYERS']],
-                "value_type": "int"
-            }, 
-            {
-                "name": f"vision_intermediate_size",
-                "type": "range",
-                "bounds": [VISION_MODEL_PARAMS['MIN_VISION_FFN_BLOCK'], VISION_MODEL_PARAMS['MAX_VISION_FFN_BLOCK']],
-                "value_type": "int"
-            }, 
-            {
-                "name": f"vision_hidden_size",
-                "type": "range",
-                "bounds": [VISION_MODEL_PARAMS['MIN_VISION_EMB_BLOCK'], VISION_MODEL_PARAMS['MAX_VISION_EMB_BLOCK']],
-                "value_type": "int"
-            }, 
-            {
-                "name": f"vision_num_attn_heads",
-                "type": "range",
-                "bounds": [VISION_MODEL_PARAMS['MIN_VISION_ATTN_HEAD'], VISION_MODEL_PARAMS['MAX_VISION_ATTN_HEAD']],
-                "value_type": "int"
-            },
             {
                 "name": f"cluster_num",
                 "type": "choice",
@@ -178,17 +150,18 @@ def optimize(run_name):
         ],
         objectives={
             # `threshold` arguments are optional
-            "accuracy": ObjectiveProperties(minimize=False, threshold=0.1),
-            "latency": ObjectiveProperties(minimize=True,threshold=0.02),
+            "accuracy": ObjectiveProperties(minimize=False, threshold=0.5),
+            "energy": ObjectiveProperties(minimize=True,threshold=1.5),
         },
         outcome_constraints=[
             AREA_CONSTRAINT,
+            LATENCY_CONSTRAINT, 
             MAX_TOPS_CONSTRAINT,
         ],
         tracking_metric_names=[
             "area",
-            "carbon",
-            "energy", 
+            "latency",
+            "carbon", 
             "tops"
         ],
         overwrite_existing_experiment=True,
@@ -198,7 +171,9 @@ def optimize(run_name):
     # ### Run Optimization
 
     csv_file_name = f"{directory}/{run_name}.csv"
-    print(f"run: {run_name}, tops: {MAX_TOPS_CONSTRAINT}, freq: {FREQUENCY}, num_trials: {NUM_TRIALS}")
+    print(AREA_CONSTRAINT)
+    print(LATENCY_CONSTRAINT)
+    print(f"run: {run_name}, tops: {MAX_TOPS_CONSTRAINT}, freq: {FREQUENCY}, num_trials: {NUM_TRIALS}, latency_constraint: {LATENCY_CONSTRAINT}")
 
     with open(csv_file_name, "a", newline="") as csvfile:
         writer = csv.writer(csvfile)

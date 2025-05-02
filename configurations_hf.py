@@ -8,18 +8,34 @@ TECHNOLOGY=22
 NUM_TRIALS = 100
 
 # Model Architecture
+# MODEL_ARCH= 'vit-base-patch16'
+# MODEL_ARCH= 'llama3'
 MODEL_ARCH= 'bertbase'
 
-# TEXT encoder
+# Note: FFN and hidden dimension (embedding) are divided into 16 blocks
+
+# TEXT encoder bert, vit
 TEXT_MODEL_PARAMS = {
 'MAX_LAYERS':12,
 'MIN_LAYERS': 6,
-'MAX_FFN_BLOCK':8,
+'MAX_FFN_BLOCK':16,
 'MIN_FFN_BLOCK': 1,
-'MAX_EMB_BLOCK' : 8,
+'MAX_EMB_BLOCK' : 16,
 'MIN_EMB_BLOCK' : 1,
 'ATTN_HEAD' : [4,6,8,12],
 }
+
+# TEXT encoder llama3
+
+# TEXT_MODEL_PARAMS = {
+# 'MAX_LAYERS':4,
+# 'MIN_LAYERS': 1,
+# 'MAX_FFN_BLOCK':6,
+# 'MIN_FFN_BLOCK': 1,
+# 'MAX_EMB_BLOCK' : 6,
+# 'MIN_EMB_BLOCK' : 1,
+# 'ATTN_HEAD' : [32],
+# }
 
 # HW Search parameters
 HW_PARAMS={
@@ -40,12 +56,12 @@ LATENCY_CONSTRAINT_VALUE = 0.05
 MAX_TOPS = 20 * (1.024)
 
 
-# Source
+# Operational carbon source (data from Electricity Maps 2024)
 OPERATIONAL_CARBON_INTENSITY = 224 # california
 # OPERATIONAL_CARBON_INTENSITY = 68 # BC
 # OPERATIONAL_CARBON_INTENSITY = 524 # Taiwan
 
-# embodied carbon 
+# embodied carbon location (based on ACT data)
 CARBON_INTENSITY_LOC = "loc_taiwan"
 # CARBON_INTENSITY_LOC = "loc_usa"
 # CARBON_INTENSITY_LOC = "loc_iceland"

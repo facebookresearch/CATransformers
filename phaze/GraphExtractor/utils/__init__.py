@@ -16,5 +16,6 @@ from .helpers import (
     transformer_models,
     clip_models,
     language_models,
+    vit_models,
 )
 from .custom_tracer import custom_tracer_for_megatron

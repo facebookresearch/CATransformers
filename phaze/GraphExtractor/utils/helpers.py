@@ -13,9 +13,10 @@ gpt_models = ["gpt2", "megatrongpt3", "megatrongpt2-xl",
 opt_models = ["opt"]
 megatron_language_models = ["megatronbert", "megatrongpt3",
                             "megatrongpt2-xl", "megatrongpt2-54", "megatrongpt2-72",]
-llama_models = ["llama2"]
+llama_models = ["llama2", "llama3"]
 transformer_models = ["transformer"]
 clip_models = ["clip"]
+vit_models = ["vit-base-patch16"]
 
 language_models = bert_models + gpt_models + opt_models + llama_models + transformer_models + clip_models
 
@@ -86,6 +87,8 @@ def get_out_filepath_from_modelname(model_name, micro_batch_size=1, tmp_width=1,
         out_dir = os.path.join(out_dir, "../out/Transformer/")
     elif model_name in clip_models:
         out_dir = os.path.join(out_dir, "../out/Clip/")
+    elif model_name in vit_models:
+        out_dir = os.path.join(out_dir, "../out/Vit/")
 
     else:
         raise ValueError("Model type doesnt exist ", model_name)
