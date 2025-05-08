@@ -1,0 +1,4 @@
+[submodule "phaze/third_party_for_phaze/ACT"]
+	path = phaze/third_party_for_phaze/ACT
+	url = https://github.com/facebookresearch/ACT.git
+	branch = 22nmScaling

@@ -1,0 +1,2 @@
+technology,latency,width,depth,n_rd_ports,n_wr_ports,n_rd_wr_ports,n_banks,action,data_delta,address_delta,energy,area
+45nm,5ns,16,512,0,0,2,1,read|write|leak|update,0,0,1.5,0
